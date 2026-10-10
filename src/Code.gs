@@ -22,8 +22,8 @@ const CONFIG = {
   // (e.g. "Kiln Notes 2026"). The year also supplies the one the date column leaves out.
   TAB_KEYWORD: 'kiln',
   STUDIOS: [
-    { header: 'Downtown', calendarName: 'Kiln · Downtown' },
-    { header: 'JTown', calendarName: 'Kiln · JTown' },
+    { header: 'Downtown', calendarName: 'Higher Fire · Downtown' },
+    { header: 'JTown', calendarName: 'Higher Fire · JTown' },
   ],
   // Only this window is synced. Older rows keep their events but are never revisited,
   // so after-the-fact edits ("to be loaded" → "loaded") don't churn history.
