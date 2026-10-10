@@ -737,13 +737,19 @@ function createEvents_(calendar, cell, parsed) {
   const events = [];
   for (const activity of parsed.activities) {
     const { stage, title } = titled(activity);
-    events.push({ stage, event: calendar.createAllDayEvent(title, cell.date, options) });
+    events.push({
+      stage,
+      event: calendar.createAllDayEvent(title, cell.date, options),
+    });
   }
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
     const { stage, title } = titled(item.title);
-    events.push({ stage, event: calendar.createEvent(title, start, end, options) });
+    events.push({
+      stage,
+      event: calendar.createEvent(title, start, end, options),
+    });
   }
   for (const { stage, event } of events) {
     if (!stage) continue;
