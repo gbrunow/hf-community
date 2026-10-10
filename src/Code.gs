@@ -734,10 +734,11 @@ function createEvents_(calendar, cell, parsed) {
     `Original note: "${cell.dateLabel}: ${cell.text}"\n${cell.cellUrl}\n\n` +
     footer_(cell.sheetUrl);
   const options = { description, location: cell.studio.location };
-  // The title prefix carries the stage to clients that ignore event colors (Apple Calendar).
+  // A stage's optional emoji prefixes the title, carrying the stage to clients that
+  // ignore event colors (Apple Calendar).
   const titled = (title) => {
     const stage = stageOf_(title);
-    return { stage, title: stage ? `${stage.emoji} ${title}` : title };
+    return { stage, title: stage?.emoji ? `${stage.emoji} ${title}` : title };
   };
   const events = [];
   for (const activity of parsed.activities) {
