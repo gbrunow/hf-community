@@ -633,11 +633,13 @@ function parseNotes_(cells, model) {
   for (let attempt = 1; ; attempt++) {
     response = UrlFetchApp.fetch(url, request);
     const code = response.getResponseCode();
-    if ((code !== 429 && code < 500) || attempt === 3) break;
+    // Only server errors are retried. A 429 means the quota is spent, which waiting
+    // seconds won't fix, and the next scheduled run retries anyway.
+    if (code < 500 || attempt === 3) break;
     console.warn(
       `Gemini HTTP ${code} on attempt ${attempt}; retrying in ${10 * attempt}s`,
     );
-    Utilities.sleep(10000 * attempt); // Free-tier rate limit or transient outage.
+    Utilities.sleep(10000 * attempt);
   }
   if (response.getResponseCode() !== 200) {
     throw new Error(
