@@ -84,7 +84,7 @@ const CONFIG = {
     {
       name: 'Closure',
       pattern: /\bclos(ed|es|ing|ure)\b/i,
-      colorId: eventColor.graphite,
+      colorId: eventColor.radicchio,
       emoji: '🔴',
     },
     {
@@ -97,17 +97,15 @@ const CONFIG = {
     {
       name: 'Cooling',
       pattern: /\bcool/i,
-      colorId: eventColor.peacock,
     },
     {
       name: 'Firing',
       pattern: /\bfir(e|ed|es|ing)\b/i,
-      colorId: eventColor.radicchio,
     },
     {
       name: 'Loading',
       pattern: /\bload/i,
-      colorId: eventColor.mango,
+      colorId: eventColor.peacock,
       emoji: '🔵',
       remindDaysBefore: [1, 2],
     },
