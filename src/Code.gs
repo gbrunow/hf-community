@@ -8,15 +8,15 @@
  * them removed.
  *
  * Setup:
- *   1. Set CONFIG.SOURCE_SPREADSHEET_ID (the long id in the source sheet's URL).
- *   2. Project Settings → Script properties → add GEMINI_API_KEY.
- *   3. Project Settings → set the time zone to the studio's.
- *   4. Run preview() and check the log. Nothing is written.
- *   5. Run sync() once, then installTrigger().
+ *   1. Project Settings → Script properties → add SOURCE_SPREADSHEET_ID (the long id in
+ *      the source sheet's URL) and GEMINI_API_KEY. Kept out of the code so pasting in a
+ *      new version doesn't wipe them.
+ *   2. Project Settings → set the time zone to the studio's.
+ *   3. Run preview() and check the log. Nothing is written.
+ *   4. Run sync() once, then installTrigger().
  */
 
 const CONFIG = {
-  SOURCE_SPREADSHEET_ID: 'PASTE_SPREADSHEET_ID_HERE',
   // One tab per year, e.g. "Kiln Notes 2026". The year in the tab name supplies the
   // year the date column leaves out.
   TAB_NAME_PREFIX: 'Kiln Notes ',
@@ -156,7 +156,7 @@ function run_({ dryRun, pastDays }) {
 }
 
 function readCells_(today, windowStart, windowEnd) {
-  const spreadsheet = SpreadsheetApp.openById(CONFIG.SOURCE_SPREADSHEET_ID);
+  const spreadsheet = SpreadsheetApp.openById(requiredProperty_('SOURCE_SPREADSHEET_ID'));
   const cells = [];
   for (let year = windowStart.getFullYear(); year <= windowEnd.getFullYear(); year++) {
     const tabName = CONFIG.TAB_NAME_PREFIX + year;
@@ -210,9 +210,7 @@ function parseRowDate_(value, year) {
 }
 
 function parseNote_(cell) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('GEMINI_API_KEY is not set in Script properties');
-
+  const apiKey = requiredProperty_('GEMINI_API_KEY');
   const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][cell.date.getDay()];
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent`;
   const request = {
@@ -290,6 +288,12 @@ function getCalendar_(name) {
     calendarCache_[name] = CalendarApp.getCalendarsByName(name)[0] || CalendarApp.createCalendar(name);
   }
   return calendarCache_[name];
+}
+
+function requiredProperty_(name) {
+  const value = PropertiesService.getScriptProperties().getProperty(name);
+  if (!value) throw new Error(`${name} is not set in Script properties`);
+  return value;
 }
 
 function loadState_(props) {
