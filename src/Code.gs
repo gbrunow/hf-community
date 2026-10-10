@@ -60,9 +60,6 @@ const CONFIG = {
   WINDOW_PAST_DAYS: 14,
   DEFAULT_SYNC_MAX_DAYS_AHEAD: 14, // Overridden by the SYNC_MAX_DAYS_AHEAD script property.
   TIMED_EVENT_MINUTES: 30,
-  // A stage's remindDaysBefore fires at the event's own time of day, or at this hour for
-  // all-day events. Reminders belong to the calendar owner; subscribers get their own.
-  ALL_DAY_REMINDER_HOUR: 15,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.5-flash-lite', // Overridden by the GEMINI_MODEL script property.
   // Extraction needs little reasoning; the model's own default took minutes per batch.
@@ -92,7 +89,6 @@ const CONFIG = {
       pattern: /unload/i,
       colorId: eventColor.sage,
       emoji: '🟢',
-      remindDaysBefore: [1],
     },
     {
       name: 'Cooling',
@@ -107,7 +103,6 @@ const CONFIG = {
       pattern: /\bload/i,
       colorId: eventColor.peacock,
       emoji: '🔵',
-      remindDaysBefore: [1, 2],
     },
   ],
   // Closes each calendar's description and every event's, since most calendar apps never
@@ -769,25 +764,9 @@ function createEvents_(calendar, cell, parsed) {
     });
   }
   for (const { stage, event } of events) {
-    if (!stage) continue;
-    if (stage.colorId) event.setColor(String(stage.colorId));
-    if (stage.remindDaysBefore) {
-      event.removeAllReminders();
-      for (const days of stage.remindDaysBefore) {
-        event.addPopupReminder(reminderMinutes_(days, event.isAllDayEvent()));
-      }
-    }
+    if (stage?.colorId) event.setColor(String(stage.colorId));
   }
   return events.map(({ event }) => event.getId());
-}
-
-/**
- * Minutes before the event's start for a reminder `days` before it. An all-day event
- * starts at midnight, so its reminder lands at CONFIG.ALL_DAY_REMINDER_HOUR instead.
- */
-function reminderMinutes_(days, allDay) {
-  const minutes = days * 24 * 60;
-  return allDay ? minutes - CONFIG.ALL_DAY_REMINDER_HOUR * 60 : minutes;
 }
 
 function stageOf_(title) {
