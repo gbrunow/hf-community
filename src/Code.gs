@@ -30,8 +30,16 @@ const CONFIG = {
   // (e.g. "Kiln Notes 2026"). The year also supplies the one the date column leaves out.
   TAB_KEYWORD: 'kiln',
   STUDIOS: [
-    { header: 'Downtown', calendarName: 'Higher Fire · Downtown' },
-    { header: 'JTown', calendarName: 'Higher Fire · JTown' },
+    {
+      header: 'Downtown',
+      calendarName: 'Higher Fire · Downtown',
+      location: '499 S Market St, San Jose, CA 95113',
+    },
+    {
+      header: 'JTown',
+      calendarName: 'Higher Fire · JTown',
+      location: '520 N 7th St, San Jose, CA 95112',
+    },
   ],
   // Only this window is synced. Older rows keep their events but are never revisited,
   // so after-the-fact edits ("to be loaded" → "loaded") don't churn history.
@@ -703,13 +711,14 @@ function createEvents_(calendar, cell, parsed) {
     `${cell.studio.calendarName}\n\n` +
     `Original note: "${cell.dateLabel}: ${cell.text}"\n${cell.cellUrl}\n\n` +
     footer_(cell.sheetUrl);
+  const options = { description, location: cell.studio.location };
   const events = parsed.activities.map((activity) =>
-    calendar.createAllDayEvent(activity, cell.date, { description }),
+    calendar.createAllDayEvent(activity, cell.date, options),
   );
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    events.push(calendar.createEvent(item.title, start, end, { description }));
+    events.push(calendar.createEvent(item.title, start, end, options));
   }
   for (const event of events) {
     const stage = stageOf_(event.getTitle());
