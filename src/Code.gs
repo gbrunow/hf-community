@@ -16,6 +16,8 @@
  *        SYNC_INTERVAL_MINUTES  replaces CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES; sync() picks
  *                               up a change on its next run.
  *        SYNC_MAX_DAYS_AHEAD    replaces CONFIG.DEFAULT_SYNC_MAX_DAYS_AHEAD.
+ *        GEMINI_THINKING_LEVEL  replaces CONFIG.DEFAULT_GEMINI_THINKING_LEVEL; "default"
+ *                               omits the setting, for models that don't accept it.
  *   2. Project Settings → set the time zone to the studio's.
  *   3. Run preview() and check the log. Nothing is written.
  *   4. Run sync() once, then installTrigger().
@@ -36,6 +38,9 @@ const CONFIG = {
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
+  // Extraction needs little reasoning; the model's own default took minutes per batch.
+  // Overridden by the GEMINI_THINKING_LEVEL script property.
+  DEFAULT_GEMINI_THINKING_LEVEL: 'low',
   // New notes are sent to Gemini in as few requests as this cap allows, split evenly
   // (130 notes → two requests of 65), so no request is a near-empty leftover.
   MAX_NOTES_PER_REQUEST: 100,
@@ -459,6 +464,17 @@ function parseNotes_(cells) {
   const model =
     PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') ||
     CONFIG.DEFAULT_GEMINI_MODEL;
+  const thinkingLevel =
+    PropertiesService.getScriptProperties().getProperty(
+      'GEMINI_THINKING_LEVEL',
+    ) || CONFIG.DEFAULT_GEMINI_THINKING_LEVEL;
+  const generationConfig = {
+    responseMimeType: 'application/json',
+    responseSchema: RESPONSE_SCHEMA,
+  };
+  if (thinkingLevel !== 'default') {
+    generationConfig.thinkingConfig = { thinkingLevel };
+  }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const request = {
     method: 'post',
@@ -468,12 +484,7 @@ function parseNotes_(cells) {
     payload: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: JSON.stringify(notes) }] }],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_SCHEMA,
-        // Extraction needs little reasoning; the default level took minutes per batch.
-        thinkingConfig: { thinkingLevel: 'low' },
-      },
+      generationConfig,
     }),
   };
 
