@@ -10,7 +10,8 @@
  * Setup:
  *   1. Project Settings → Script properties → add SOURCE_SPREADSHEET_ID (the long id in
  *      the source sheet's URL) and GEMINI_API_KEY. Kept out of the code so pasting in a
- *      new version doesn't wipe them.
+ *      new version doesn't wipe them. Optionally add GEMINI_MODEL to override
+ *      CONFIG.DEFAULT_GEMINI_MODEL when Google retires a model.
  *   2. Project Settings → set the time zone to the studio's.
  *   3. Run preview() and check the log. Nothing is written.
  *   4. Run sync() once, then installTrigger().
@@ -30,7 +31,7 @@ const CONFIG = {
   WINDOW_FUTURE_DAYS: 14,
   TIMED_EVENT_MINUTES: 30,
   SYNC_EVERY_HOURS: 1, // Apps Script allows 1, 2, 4, 6, 8 or 12.
-  GEMINI_MODEL: 'gemini-3.8-flash',
+  DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
 };
 
 const STATE_PREFIX = 'cell:';
@@ -225,7 +226,9 @@ function parseRowDate_(value, year) {
 function parseNote_(cell) {
   const apiKey = requiredProperty_('GEMINI_API_KEY');
   const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][cell.date.getDay()];
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent`;
+  const model = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL')
+    || CONFIG.DEFAULT_GEMINI_MODEL;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const request = {
     method: 'post',
     contentType: 'application/json',
