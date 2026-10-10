@@ -772,7 +772,7 @@ function createEvents_(calendar, cell, parsed) {
   }
   for (const { stage, event } of events) {
     if (!stage) continue;
-    event.setColor(String(stage.colorId));
+    if (stage.colorId) event.setColor(String(stage.colorId));
     if (stage.remindDaysBefore) {
       event.removeAllReminders();
       for (const days of stage.remindDaysBefore) {
