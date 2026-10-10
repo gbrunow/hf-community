@@ -49,16 +49,18 @@ const CONFIG = {
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
-  // Event color per kiln stage, from the first pattern matching the event title (so
-  // "unload" is checked before "load"). Events only take Google Calendar's 11 fixed colors;
-  // the comment gives each one's name and hex in the web UI. Name each color after its
-  // stage under Settings → the calendar → Event labels. Apple Calendar ignores event colors.
+  // Calendar label per kiln stage, from the first pattern matching the event title (so
+  // "unload" is checked before "load"). The API can't set a label directly: each label
+  // owns one of the 11 legacy color IDs, and setting that ID applies it. An ID with no
+  // label on a calendar is dropped, so every studio calendar needs these labels on these
+  // IDs (Settings → the calendar → Event labels). Label names show only to editors;
+  // subscribers see the colors. Apple Calendar ignores both.
   STAGES: [
-    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, color: 'GRAY' }, // Graphite #616161
-    { name: 'Unloading', pattern: /unload/i, color: 'GREEN' }, // Basil #0B8043
-    { name: 'Cooling', pattern: /\bcool/i, color: 'YELLOW' }, // Banana #F6BF26
-    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, color: 'ORANGE' }, // Tangerine #F4511E
-    { name: 'Loading', pattern: /\bload/i, color: 'CYAN' }, // Peacock #039BE5
+    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, colorId: '8' }, // Graphite #616161
+    { name: 'Unloading', pattern: /unload/i, colorId: '11' }, // Sage #489160
+    { name: 'Cooling', pattern: /\bcool/i, colorId: '6' }, // Peacock #4b99d2
+    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, colorId: '4' }, // Radicchio #c05476
+    { name: 'Loading', pattern: /\bload/i, colorId: '1' }, // Mango #e0963c
   ],
   // Closes each calendar's description and every event's, since most calendar apps never
   // show the calendar description. The kiln notes URL follows the final colon. Plain text:
@@ -663,7 +665,7 @@ function createEvents_(calendar, cell, parsed) {
   }
   for (const event of events) {
     const stage = stageOf_(event.getTitle());
-    if (stage) event.setColor(CalendarApp.EventColor[stage.color]);
+    if (stage) event.setColor(stage.colorId);
   }
   return events.map((event) => event.getId());
 }
