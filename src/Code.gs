@@ -1,8 +1,9 @@
 /**
  * Syncs the studio kiln log (a Google Sheet) into one Google Calendar per studio.
  *
- * Every non-empty studio cell becomes an all-day status event. Any note that names a
- * clock time ("unload by ~4pm", "unload 10/10 by 11am") also becomes a timed event.
+ * Every non-empty studio cell becomes one all-day event per kiln activity it mentions
+ * ("Reduction unloaded", "Bisque loading"). Anything at a clock time ("unload by ~4pm",
+ * "unload 10/10 by 11am") becomes a timed event instead.
  * Gemini parses the free-form notes; each cell is parsed once and remembered by a hash
  * of its content, so an edited cell has its events replaced and a cleared cell has
  * them removed.
@@ -73,9 +74,12 @@ the kilns are doing on one day at one studio. The user message is a JSON list of
 with an "id", its "date" and "weekday", and the "note" text. Reply with {"results": [...]}
 holding exactly one result per note, with the note's "id" and:
 
-- "status": the note as a short, clean status line. Fix obvious typos and casing. Drop only
-  the time details you moved into "timed"; keep everything else, including vague timing.
-  Never add information.
+- "activities": one short label per kiln activity or announcement in the note, in order,
+  each of which becomes its own calendar event. Fix obvious typos and casing, and spell
+  out kiln names: Redux/Rdx/Red → Reduction, Ox/Oxy → Oxidation, Bisq/Bisk → Bisque,
+  E bisque → Electric bisque, Unldd → unloaded. Keep qualifiers and vague timing
+  ("for Vasudha's class", "possibly in the afternoon"). Leave out anything you moved into
+  "timed". Never add information.
 - "timed": one item per thing that happens at a specific clock time. Approximate times
   count ("~4pm", "6 ish", "around 5pm"). Each item has:
   - "title": a short label such as "Bisque unload".
@@ -88,11 +92,13 @@ holding exactly one result per note, with the note's "id" and:
 
 Examples, note → result:
 {"id":0,"date":"2026-10-09","weekday":"Fri","note":"Bisque Loading, reduction cooling (unload 10/10 by 11am)"}
-→ {"id":0,"status":"Bisque loading, reduction cooling","timed":[{"title":"Reduction unload","date":"2026-10-10","time":"11:00"}]}
+→ {"id":0,"activities":["Bisque loading","Reduction cooling"],"timed":[{"title":"Reduction unload","date":"2026-10-10","time":"11:00"}]}
 {"id":1,"date":"2026-06-05","weekday":"Fri","note":"Reduction late unload (by 6 ish), bisque loading"}
-→ {"id":1,"status":"Reduction late unload, bisque loading","timed":[{"title":"Reduction unload","date":"2026-06-05","time":"18:00"}]}
+→ {"id":1,"activities":["Bisque loading"],"timed":[{"title":"Reduction unload (late)","date":"2026-06-05","time":"18:00"}]}
 {"id":2,"date":"2026-10-10","weekday":"Sat","note":"reduction to be cooled, possible unload in PM"}
-→ {"id":2,"status":"Reduction cooling, possible unload in the afternoon","timed":[]}`;
+→ {"id":2,"activities":["Reduction cooling","Reduction possibly unloaded in the afternoon"],"timed":[]}
+{"id":3,"date":"2026-10-02","weekday":"Fri","note":"Reduction unloaded, Bisque loading, Lowfire bisque for Vasudha's class loaded"}
+→ {"id":3,"activities":["Reduction unloaded","Bisque loading","Lowfire bisque loaded (Vasudha's class)"],"timed":[]}`;
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
@@ -103,7 +109,7 @@ const RESPONSE_SCHEMA = {
         type: 'OBJECT',
         properties: {
           id: { type: 'INTEGER' },
-          status: { type: 'STRING' },
+          activities: { type: 'ARRAY', items: { type: 'STRING' } },
           timed: {
             type: 'ARRAY',
             items: {
@@ -117,7 +123,7 @@ const RESPONSE_SCHEMA = {
             },
           },
         },
-        required: ['id', 'status', 'timed'],
+        required: ['id', 'activities', 'timed'],
       },
     },
   },
@@ -265,7 +271,7 @@ function run_({ dryRun, pastDays }) {
       }
 
       counts.added++;
-      counts.events += 1 + parsed.timed.length;
+      counts.events += parsed.activities.length + parsed.timed.length;
       console.log(
         `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`,
       );
@@ -483,9 +489,14 @@ function parseNotes_(cells) {
   return results;
 }
 
-/** Drops timed items the model got malformed or placed implausibly far from the row. */
+/**
+ * Drops timed items the model got malformed or placed implausibly far from the row, and
+ * falls back to the raw note when nothing usable is left.
+ */
 function validateParsed_(parsed, cell) {
-  const status = String(parsed.status || '').trim() || cell.text;
+  const activities = (parsed.activities || [])
+    .map((activity) => String(activity).trim())
+    .filter(Boolean);
   const timed = (parsed.timed || []).filter((item) => {
     if (
       !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
@@ -496,7 +507,8 @@ function validateParsed_(parsed, cell) {
     const daysAway = Math.abs(parseIsoDate_(item.date) - cell.date) / 86400000;
     return daysAway <= 7;
   });
-  return { status, timed };
+  if (!activities.length && !timed.length) activities.push(cell.text);
+  return { activities, timed };
 }
 
 function createEvents_(calendar, cell, parsed) {
@@ -504,11 +516,11 @@ function createEvents_(calendar, cell, parsed) {
     `Original kiln note, ${cell.studio.header}, ${isoDate_(cell.date)}:\n` +
     `"${cell.text}"\n${cell.cellUrl}\n\n${CONFIG.ATTRIBUTION}`;
   const prefix = `${cell.studio.header}: `;
-  const ids = [
+  const ids = parsed.activities.map((activity) =>
     calendar
-      .createAllDayEvent(prefix + parsed.status, cell.date, { description })
+      .createAllDayEvent(prefix + activity, cell.date, { description })
       .getId(),
-  ];
+  );
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
