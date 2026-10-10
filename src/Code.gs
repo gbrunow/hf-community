@@ -29,13 +29,17 @@ const CONFIG = {
   // One tab per year, found by a name containing this word and the year, case-insensitive
   // (e.g. "Kiln Notes 2026"). The year also supplies the one the date column leaves out.
   TAB_KEYWORD: 'kiln',
+  // A disabled studio isn't read; its synced events inside the window are removed on the
+  // next sync, like any cleared note. Older events and the calendar itself stay.
   STUDIOS: [
     {
+      enabled: true,
       header: 'Downtown',
       calendarName: 'Higher Fire · Downtown',
       location: '499 S Market St, San Jose, CA 95113',
     },
     {
+      enabled: false,
       header: 'JTown',
       calendarName: 'Higher Fire · JTown',
       location: '520 N 7th St, San Jose, CA 95112',
@@ -587,7 +591,8 @@ function cellsFromRows_(rows, year, windowStart, windowEnd) {
   if (headerIndex < 0) throw new Error('No header row with "Date" in column A');
 
   const header = rows[headerIndex].map((h) => String(h).trim().toLowerCase());
-  const columns = CONFIG.STUDIOS.map((studio) => {
+  const enabled = CONFIG.STUDIOS.filter((studio) => studio.enabled);
+  const columns = enabled.map((studio) => {
     const col = header.indexOf(studio.header.toLowerCase());
     if (col < 0)
       throw new Error(`No "${studio.header}" column in the header row`);
