@@ -50,14 +50,15 @@ const CONFIG = {
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
   // Event color per kiln stage, from the first pattern matching the event title (so
-  // "unload" is checked before "load"). Name each color after its stage under Google
-  // Calendar → Settings → the calendar → Event labels. Apple Calendar ignores event colors.
+  // "unload" is checked before "load"). Events only take Google Calendar's 11 fixed colors;
+  // the comment gives each one's name and hex in the web UI. Name each color after its
+  // stage under Settings → the calendar → Event labels. Apple Calendar ignores event colors.
   STAGES: [
-    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, color: 'GRAY' },
-    { name: 'Unloaded', pattern: /unload/i, color: 'GREEN' },
-    { name: 'Cooling', pattern: /\bcool/i, color: 'YELLOW' },
-    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, color: 'RED' },
-    { name: 'Loading', pattern: /\bload/i, color: 'BLUE' },
+    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, color: 'GRAY' }, // Graphite #616161
+    { name: 'Unloaded', pattern: /unload/i, color: 'GREEN' }, // Basil #0B8043
+    { name: 'Cooling', pattern: /\bcool/i, color: 'YELLOW' }, // Banana #F6BF26
+    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, color: 'ORANGE' }, // Tangerine #F4511E
+    { name: 'Loading', pattern: /\bload/i, color: 'CYAN' }, // Peacock #039BE5
   ],
   // Closes each calendar's description and every event's, since most calendar apps never
   // show the calendar description. The kiln notes URL follows the final colon. Plain text:
