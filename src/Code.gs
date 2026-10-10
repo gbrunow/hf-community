@@ -30,7 +30,7 @@ const CONFIG = {
   WINDOW_FUTURE_DAYS: 14,
   TIMED_EVENT_MINUTES: 30,
   SYNC_EVERY_HOURS: 1, // Apps Script allows 1, 2, 4, 6, 8 or 12.
-  GEMINI_MODEL: 'gemini-2.5-flash',
+  GEMINI_MODEL: 'gemini-3.8-flash',
 };
 
 const STATE_PREFIX = 'cell:';
@@ -238,7 +238,6 @@ function parseNote_(cell) {
         parts: [{ text: `Date ${isoDate_(cell.date)} (${weekday}), note "${cell.text}"` }],
       }],
       generationConfig: {
-        temperature: 0,
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
       },
