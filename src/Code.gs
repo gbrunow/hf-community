@@ -217,6 +217,33 @@ function forceSync() {
   sync();
 }
 
+/**
+ * Logs a one-tap webcal:// subscribe link for each enabled studio's calendar. The links
+ * only work once the calendar is public (Settings → the calendar → Access permissions →
+ * Make available to public); scripts can't read the private secret address.
+ */
+function subscribeLinks() {
+  for (const studio of CONFIG.STUDIOS.filter((s) => s.enabled)) {
+    const calendar = CalendarApp.getCalendarsByName(studio.calendarName)[0];
+    if (!calendar) {
+      console.log(`${studio.calendarName}: not created yet; run sync() first.`);
+      continue;
+    }
+    const path = `calendar.google.com/calendar/ical/${encodeURIComponent(calendar.getId())}/public/basic.ics`;
+    // Fetched without your sign-in, so it only succeeds if the calendar is public.
+    const feed = UrlFetchApp.fetch(`https://${path}`, {
+      muteHttpExceptions: true,
+    });
+    const isPublic =
+      feed.getResponseCode() === 200 &&
+      feed.getContentText().startsWith('BEGIN:VCALENDAR');
+    console.log(
+      `${studio.calendarName}: webcal://${path}` +
+        (isPublic ? '' : '\n  Not public yet, so this link won\'t work until it is.'),
+    );
+  }
+}
+
 function installTrigger() {
   const minutes = syncIntervalMinutes_();
   for (const trigger of ScriptApp.getProjectTriggers()) {
