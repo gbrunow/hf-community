@@ -18,6 +18,8 @@
  *        SYNC_MAX_DAYS_AHEAD    replaces CONFIG.DEFAULT_SYNC_MAX_DAYS_AHEAD.
  *        GEMINI_THINKING_LEVEL  replaces CONFIG.DEFAULT_GEMINI_THINKING_LEVEL; "default"
  *                               omits the setting, for models that don't accept it.
+ *        GEMINI_PREVIEW_MODEL   used by preview() instead of the sync model, to try a
+ *                               model out before switching GEMINI_MODEL to it.
  *   2. Project Settings → set the time zone to the studio's.
  *   3. Run preview() and check the log. Nothing is written.
  *   4. Run sync() once, then installTrigger().
@@ -273,6 +275,7 @@ function run_({ dryRun, pastDays }) {
     deferred: 0,
   };
 
+  const model = geminiModel_(dryRun);
   const fresh = [];
   for (const cell of readCells_(today, windowStart, windowEnd)) {
     counts.cells++;
@@ -296,7 +299,7 @@ function run_({ dryRun, pastDays }) {
     const batch = fresh.slice(start, start + batchSize);
     let results;
     try {
-      results = parseNotes_(batch.map(({ cell }) => cell));
+      results = parseNotes_(batch.map(({ cell }) => cell), model);
     } catch (e) {
       // Later batches would most likely hit the same error (usually a rate limit), so
       // leave everything left for the next run.
@@ -369,7 +372,8 @@ function run_({ dryRun, pastDays }) {
       `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed` +
       (counts.deferred
         ? `, ${counts.deferred} left for the next run (out of time).`
-        : '.'),
+        : '.') +
+      (counts.added || counts.failed ? ` Model: ${model}.` : ''),
   );
 }
 
@@ -477,11 +481,20 @@ function parseRowDate_(value, year) {
   return new Date(year, month, Number(match[2]));
 }
 
+function geminiModel_(forPreview) {
+  const props = PropertiesService.getScriptProperties();
+  return (
+    (forPreview && props.getProperty('GEMINI_PREVIEW_MODEL')) ||
+    props.getProperty('GEMINI_MODEL') ||
+    CONFIG.DEFAULT_GEMINI_MODEL
+  );
+}
+
 /**
  * Parses a batch of notes in one Gemini request. Returns results indexed like `cells`;
  * a note missing from the reply is left undefined.
  */
-function parseNotes_(cells) {
+function parseNotes_(cells, model) {
   const apiKey = requiredProperty_('GEMINI_API_KEY');
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const notes = cells.map((cell, id) => ({
@@ -490,9 +503,6 @@ function parseNotes_(cells) {
     weekday: weekdays[cell.date.getDay()],
     note: cell.text,
   }));
-  const model =
-    PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') ||
-    CONFIG.DEFAULT_GEMINI_MODEL;
   const thinkingLevel =
     PropertiesService.getScriptProperties().getProperty(
       'GEMINI_THINKING_LEVEL',
