@@ -112,11 +112,16 @@ function run_({ dryRun, pastDays }) {
   const props = PropertiesService.getScriptProperties();
   const state = loadState_(props);
   const seen = new Set();
+  const counts = { cells: 0, unchanged: 0, added: 0, events: 0, removed: 0, failed: 0 };
 
   for (const cell of readCells_(today, windowStart, windowEnd)) {
+    counts.cells++;
     const key = cellKey_(cell);
     seen.add(key);
-    if (state[key]) continue;
+    if (state[key]) {
+      counts.unchanged++;
+      continue;
+    }
 
     let parsed;
     try {
@@ -124,13 +129,15 @@ function run_({ dryRun, pastDays }) {
     } catch (e) {
       // Not recorded, so the next run retries it.
       console.error(`Skipping ${describe_(cell)}: ${e.message}`);
+      counts.failed++;
       continue;
     }
 
-    if (dryRun) {
-      console.log(`${describe_(cell)}\n  → ${JSON.stringify(parsed)}`);
-      continue;
-    }
+    counts.added++;
+    counts.events += 1 + parsed.timed.length;
+    console.log(`${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`);
+    if (dryRun) continue;
+
     const ids = createEvents_(getCalendar_(cell.studio.calendarName), cell, parsed);
     props.setProperty(STATE_PREFIX + key, JSON.stringify({
       calendarName: cell.studio.calendarName,
@@ -150,13 +157,19 @@ function run_({ dryRun, pastDays }) {
     if (date > windowEnd) continue;
 
     // Inside the window but no longer in the sheet: the cell was edited or cleared.
-    if (dryRun) {
-      console.log(`Would remove ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date}`);
-      continue;
-    }
+    counts.removed += entry.ids.length;
+    console.log(`${dryRun ? 'Would remove' : 'Removed'} ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date}`);
+    if (dryRun) continue;
     deleteEvents_(entry);
     props.deleteProperty(STATE_PREFIX + key);
   }
+
+  console.log(
+    `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
+    `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
+    `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
+    `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed.`,
+  );
 }
 
 function readCells_(today, windowStart, windowEnd) {
