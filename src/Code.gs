@@ -585,10 +585,9 @@ function createEvents_(calendar, cell, parsed) {
   const description =
     `Original kiln note, ${cell.studio.header}, ${isoDate_(cell.date)}:\n` +
     `"${cell.text}"\n${cell.cellUrl}\n\n${CONFIG.ATTRIBUTION}`;
-  const prefix = `${cell.studio.header}: `;
   const ids = parsed.activities.map((activity) =>
     calendar
-      .createAllDayEvent(prefix + activity, cell.date, { description })
+      .createAllDayEvent(activity, cell.date, { description })
       .getId(),
   );
   for (const item of parsed.timed) {
@@ -596,7 +595,7 @@ function createEvents_(calendar, cell, parsed) {
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
     ids.push(
       calendar
-        .createEvent(prefix + item.title, start, end, { description })
+        .createEvent(item.title, start, end, { description })
         .getId(),
     );
   }
