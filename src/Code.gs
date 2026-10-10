@@ -71,7 +71,7 @@ const CONFIG = {
       name: 'Closure',
       pattern: /\bclos(ed|es|ing|ure)\b/i,
       colorId: '2', // Graphite #616161
-      emoji: '⚫',
+      emoji: '🔴',
     },
     {
       name: 'Unloading',
@@ -84,19 +84,17 @@ const CONFIG = {
       name: 'Cooling',
       pattern: /\bcool/i,
       colorId: '6', // Peacock #4b99d2
-      emoji: '🔵',
     },
     {
       name: 'Firing',
       pattern: /\bfir(e|ed|es|ing)\b/i,
       colorId: '4', // Radicchio #c05476
-      emoji: '🔴',
     },
     {
       name: 'Loading',
       pattern: /\bload/i,
       colorId: '1', // Mango #e0963c
-      emoji: '🟠',
+      emoji: '🔵',
       remindDaysBefore: [1, 2],
     },
   ],
