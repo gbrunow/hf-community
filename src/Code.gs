@@ -229,16 +229,16 @@ function subscribeLinks() {
       console.log(`${studio.calendarName}: not created yet; run sync() first.`);
       continue;
     }
-    const path = `calendar.google.com/calendar/ical/${encodeURIComponent(calendar.getId())}/public/basic.ics`;
+    const link = subscribeUrl_(calendar);
     // Fetched without your sign-in, so it only succeeds if the calendar is public.
-    const feed = UrlFetchApp.fetch(`https://${path}`, {
+    const feed = UrlFetchApp.fetch(link.replace(/^webcal:/, 'https:'), {
       muteHttpExceptions: true,
     });
     const isPublic =
       feed.getResponseCode() === 200 &&
       feed.getContentText().startsWith('BEGIN:VCALENDAR');
     console.log(
-      `${studio.calendarName}: webcal://${path}` +
+      `${studio.calendarName}: ${link}` +
         (isPublic ? '' : '\n  Not public yet, so this link won\'t work until it is.'),
     );
   }
@@ -827,12 +827,19 @@ function footer_(sheetUrl) {
 
 const calendarCache_ = {};
 
+/** The calendar's public iCal feed as a webcal:// link, which opens a subscribe prompt. */
+function subscribeUrl_(calendar) {
+  return `webcal://calendar.google.com/calendar/ical/${encodeURIComponent(calendar.getId())}/public/basic.ics`;
+}
+
 function getCalendar_(name, sheetUrl) {
   if (!calendarCache_[name]) {
     const calendar =
       CalendarApp.getCalendarsByName(name)[0] ||
       CalendarApp.createCalendar(name);
-    const description = footer_(sheetUrl);
+    const description =
+      `Subscribe: ${subscribeUrl_(calendar)}\n\n` +
+      footer_(sheetUrl);
     if (calendar.getDescription() !== description)
       calendar.setDescription(description);
     calendarCache_[name] = calendar;
