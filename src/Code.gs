@@ -29,7 +29,7 @@ const CONFIG = {
   WINDOW_PAST_DAYS: 1,
   WINDOW_FUTURE_DAYS: 14,
   TIMED_EVENT_MINUTES: 30,
-  SYNC_EVERY_HOURS: 4, // Apps Script allows 1, 2, 4, 6, 8 or 12.
+  SYNC_EVERY_HOURS: 1, // Apps Script allows 1, 2, 4, 6, 8 or 12.
   GEMINI_MODEL: 'gemini-2.5-flash',
 };
 
