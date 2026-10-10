@@ -239,7 +239,9 @@ function subscribeLinks() {
       feed.getContentText().startsWith('BEGIN:VCALENDAR');
     console.log(
       `${studio.calendarName}: ${link}` +
-        (isPublic ? '' : '\n  Not public yet, so this link won\'t work until it is.'),
+        (isPublic
+          ? ''
+          : "\n  Not public yet, so this link won't work until it is."),
     );
   }
 }
