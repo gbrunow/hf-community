@@ -109,6 +109,21 @@ function installTrigger() {
   ScriptApp.newTrigger('sync').timeBased().everyHours(CONFIG.SYNC_EVERY_HOURS).create();
 }
 
+/**
+ * Deletes every event this script created and forgets every cell, so the next sync()
+ * rebuilds from scratch. Use after renaming calendars or changing how events look.
+ */
+function reset() {
+  const props = PropertiesService.getScriptProperties();
+  let events = 0;
+  for (const [key, entry] of Object.entries(loadState_(props))) {
+    deleteEvents_(entry);
+    events += entry.ids.length;
+    props.deleteProperty(STATE_PREFIX + key);
+  }
+  console.log(`Reset: deleted ${events} event(s). Run sync() to rebuild.`);
+}
+
 function run_({ dryRun, pastDays }) {
   const today = startOfDay_(new Date());
   const windowStart = addDays_(today, -pastDays);
