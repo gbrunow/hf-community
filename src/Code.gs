@@ -267,6 +267,27 @@ function listModels() {
   console.log(`${lines.length} models support generateContent:\n${lines.join('\n')}`);
 }
 
+/** Logs the event color IDs the Calendar API accepts, with their hex, for CONFIG.STAGES. */
+function listEventColors() {
+  const response = UrlFetchApp.fetch(
+    'https://www.googleapis.com/calendar/v3/colors',
+    {
+      headers: { Authorization: `Bearer ${ScriptApp.getOAuthToken()}` },
+      muteHttpExceptions: true,
+    },
+  );
+  if (response.getResponseCode() !== 200) {
+    throw new Error(
+      `Calendar HTTP ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`,
+    );
+  }
+  const colors = JSON.parse(response.getContentText()).event || {};
+  const lines = Object.entries(colors).map(
+    ([id, { background }]) => `${id.padStart(2)}  ${background}`,
+  );
+  console.log(`${lines.length} event colors (id, hex):\n${lines.join('\n')}`);
+}
+
 function run_({ dryRun, pastDays }) {
   const startedAt = Date.now();
   const outOfTime = () => Date.now() - startedAt > CONFIG.RUN_TIME_BUDGET_MS;
