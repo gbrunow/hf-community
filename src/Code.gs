@@ -49,7 +49,7 @@ const CONFIG = {
       location: '499 S Market St, San Jose, CA 95113',
     },
     {
-      enabled: false,
+      enabled: true,
       header: 'JTown',
       calendarName: 'Higher Fire · JTown',
       location: '520 N 7th St, San Jose, CA 95112',
