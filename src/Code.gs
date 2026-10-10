@@ -39,7 +39,7 @@ const CONFIG = {
   DEFAULT_SYNC_MAX_DAYS_AHEAD: 14, // Overridden by the SYNC_MAX_DAYS_AHEAD script property.
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
-  DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
+  DEFAULT_GEMINI_MODEL: 'gemini-3.5-flash-lite', // Overridden by the GEMINI_MODEL script property.
   // Extraction needs little reasoning; the model's own default took minutes per batch.
   // Overridden by the GEMINI_THINKING_LEVEL script property.
   DEFAULT_GEMINI_THINKING_LEVEL: 'low',
