@@ -39,6 +39,9 @@ const CONFIG = {
   // New notes are sent to Gemini in batches of this size, one request per batch, so a
   // run costs a request or two instead of one per note.
   NOTES_PER_REQUEST: 25,
+  // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
+  // creation starts; what's left is picked up by the next run.
+  RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
   // Set as each calendar's description and appended to every event, since most calendar
   // apps never show the calendar description. Both also link to the kiln notes.
   ATTRIBUTION:
@@ -219,6 +222,8 @@ function reset() {
 }
 
 function run_({ dryRun, pastDays }) {
+  const startedAt = Date.now();
+  const outOfTime = () => Date.now() - startedAt > CONFIG.RUN_TIME_BUDGET_MS;
   const today = startOfDay_(new Date());
   const windowStart = addDays_(today, -pastDays);
   const windowEnd = addDays_(today, syncMaxDaysAhead_());
@@ -233,6 +238,7 @@ function run_({ dryRun, pastDays }) {
     events: 0,
     removed: 0,
     failed: 0,
+    deferred: 0,
   };
 
   const fresh = [];
@@ -247,7 +253,15 @@ function run_({ dryRun, pastDays }) {
     }
   }
 
-  for (let start = 0; start < fresh.length; start += CONFIG.NOTES_PER_REQUEST) {
+  batches: for (
+    let start = 0;
+    start < fresh.length;
+    start += CONFIG.NOTES_PER_REQUEST
+  ) {
+    if (outOfTime()) {
+      counts.deferred += fresh.length - start;
+      break;
+    }
     const batch = fresh.slice(start, start + CONFIG.NOTES_PER_REQUEST);
     let results;
     try {
@@ -263,6 +277,10 @@ function run_({ dryRun, pastDays }) {
     }
 
     for (const [id, { cell, key }] of batch.entries()) {
+      if (outOfTime()) {
+        counts.deferred += fresh.length - (start + id);
+        break batches;
+      }
       const parsed = results[id];
       if (!parsed) {
         console.error(`Skipping ${describe_(cell)}: missing from Gemini's reply`);
@@ -317,7 +335,8 @@ function run_({ dryRun, pastDays }) {
     `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
       `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
       `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
-      `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed.`,
+      `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed, ` +
+      `${counts.deferred} left for the next run (out of time).`,
   );
 }
 
