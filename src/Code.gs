@@ -76,7 +76,9 @@ const STATE_PREFIX = 'cell:';
 // The interval the current trigger was installed with; Apps Script can't report it.
 const INSTALLED_INTERVAL_PROPERTY = 'trigger:intervalMinutes';
 // The only intervals Apps Script time-based triggers support.
-const ALLOWED_INTERVAL_MINUTES = [1, 5, 10, 15, 30, 60, 120, 240, 360, 480, 720];
+const ALLOWED_INTERVAL_MINUTES = [
+  1, 5, 10, 15, 30, 60, 120, 240, 360, 480, 720,
+];
 
 const MONTHS = {
   jan: 0,
@@ -203,9 +205,7 @@ function syncIntervalMinutes_() {
   const value = PropertiesService.getScriptProperties().getProperty(
     'SYNC_INTERVAL_MINUTES',
   );
-  const minutes = value
-    ? Number(value)
-    : CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
+  const minutes = value ? Number(value) : CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
   if (!ALLOWED_INTERVAL_MINUTES.includes(minutes)) {
     throw new Error(
       `SYNC_INTERVAL_MINUTES is "${value}"; it must be one of ${ALLOWED_INTERVAL_MINUTES.join(', ')}`,
@@ -260,13 +260,17 @@ function listModels() {
     );
   }
   const lines = (JSON.parse(response.getContentText()).models || [])
-    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .filter((m) =>
+      (m.supportedGenerationMethods || []).includes('generateContent'),
+    )
     .map(
       (m) =>
         `${m.name.replace(/^models\//, '')} — ${m.displayName}` +
         (m.thinking ? ' (thinking)' : ''),
     );
-  console.log(`${lines.length} models support generateContent:\n${lines.join('\n')}`);
+  console.log(
+    `${lines.length} models support generateContent:\n${lines.join('\n')}`,
+  );
 }
 
 /** Logs the event color IDs the Calendar API accepts, with their hex, for CONFIG.STAGES. */
@@ -296,11 +300,35 @@ function listEventColors() {
  */
 function inspectEventColors() {
   const standard = new Set([
-    'kind', 'etag', 'id', 'status', 'htmlLink', 'created', 'updated', 'summary',
-    'description', 'creator', 'organizer', 'start', 'end', 'iCalUID', 'sequence',
-    'reminders', 'eventType', 'colorId', 'transparency', 'visibility', 'location',
-    'attendees', 'extendedProperties', 'guestsCanInviteOthers', 'privateCopy',
-    'source', 'recurringEventId', 'originalStartTime', 'endTimeUnspecified',
+    'kind',
+    'etag',
+    'id',
+    'status',
+    'htmlLink',
+    'created',
+    'updated',
+    'summary',
+    'description',
+    'creator',
+    'organizer',
+    'start',
+    'end',
+    'iCalUID',
+    'sequence',
+    'reminders',
+    'eventType',
+    'colorId',
+    'transparency',
+    'visibility',
+    'location',
+    'attendees',
+    'extendedProperties',
+    'guestsCanInviteOthers',
+    'privateCopy',
+    'source',
+    'recurringEventId',
+    'originalStartTime',
+    'endTimeUnspecified',
   ]);
   const today = startOfDay_(new Date());
   for (const studio of CONFIG.STUDIOS) {
@@ -365,7 +393,10 @@ function run_({ dryRun, pastDays }) {
     const batch = fresh.slice(start, start + batchSize);
     let results;
     try {
-      results = parseNotes_(batch.map(({ cell }) => cell), model);
+      results = parseNotes_(
+        batch.map(({ cell }) => cell),
+        model,
+      );
     } catch (e) {
       // Later batches would most likely hit the same error (usually a rate limit), so
       // leave everything left for the next run.
@@ -383,7 +414,9 @@ function run_({ dryRun, pastDays }) {
       }
       const parsed = results[id];
       if (!parsed) {
-        console.error(`Skipping ${describe_(cell)}: missing from Gemini's reply`);
+        console.error(
+          `Skipping ${describe_(cell)}: missing from Gemini's reply`,
+        );
         counts.failed++;
         continue;
       }
@@ -679,7 +712,9 @@ function describeParsed_(parsed) {
   const label = (title) => `${title} [${stageOf_(title)?.name || 'no stage'}]`;
   return [
     ...parsed.activities.map(label),
-    ...parsed.timed.map((item) => `${item.date} ${item.time} ${label(item.title)}`),
+    ...parsed.timed.map(
+      (item) => `${item.date} ${item.time} ${label(item.title)}`,
+    ),
   ].join(' · ');
 }
 
