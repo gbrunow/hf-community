@@ -49,6 +49,16 @@ const CONFIG = {
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
+  // Event color per kiln stage, from the first pattern matching the event title (so
+  // "unload" is checked before "load"). Name each color after its stage under Google
+  // Calendar → Settings → the calendar → Event labels. Apple Calendar ignores event colors.
+  STAGES: [
+    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, color: 'GRAY' },
+    { name: 'Unloaded', pattern: /unload/i, color: 'GREEN' },
+    { name: 'Cooling', pattern: /\bcool/i, color: 'YELLOW' },
+    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, color: 'RED' },
+    { name: 'Loading', pattern: /\bload/i, color: 'BLUE' },
+  ],
   // Closes each calendar's description and every event's, since most calendar apps never
   // show the calendar description. The kiln notes URL follows the final colon. Plain text:
   // Apple Calendar shows HTML descriptions as raw tags.
@@ -326,7 +336,7 @@ function run_({ dryRun, pastDays }) {
       counts.added++;
       counts.events += parsed.activities.length + parsed.timed.length;
       console.log(
-        `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`,
+        `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${describeParsed_(parsed)}`,
       );
       if (dryRun) continue;
 
@@ -590,21 +600,32 @@ function createEvents_(calendar, cell, parsed) {
     `${cell.studio.calendarName}\n\n` +
     `Original note: "${cell.dateLabel}: ${cell.text}"\n${cell.cellUrl}\n\n` +
     footer_(cell.sheetUrl);
-  const ids = parsed.activities.map((activity) =>
-    calendar
-      .createAllDayEvent(activity, cell.date, { description })
-      .getId(),
+  const events = parsed.activities.map((activity) =>
+    calendar.createAllDayEvent(activity, cell.date, { description }),
   );
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    ids.push(
-      calendar
-        .createEvent(item.title, start, end, { description })
-        .getId(),
-    );
+    events.push(calendar.createEvent(item.title, start, end, { description }));
   }
-  return ids;
+  for (const event of events) {
+    const stage = stageOf_(event.getTitle());
+    if (stage) event.setColor(CalendarApp.EventColor[stage.color]);
+  }
+  return events.map((event) => event.getId());
+}
+
+function stageOf_(title) {
+  return CONFIG.STAGES.find((stage) => stage.pattern.test(title)) || null;
+}
+
+/** "Bisque loading [Loading] · 2026-10-10 11:00 Reduction unload [Unloaded]" */
+function describeParsed_(parsed) {
+  const label = (title) => `${title} [${stageOf_(title)?.name || 'no stage'}]`;
+  return [
+    ...parsed.activities.map(label),
+    ...parsed.timed.map((item) => `${item.date} ${item.time} ${label(item.title)}`),
+  ].join(' · ');
 }
 
 function deleteEvents_(entry) {
