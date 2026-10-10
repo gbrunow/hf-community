@@ -56,7 +56,7 @@ const CONFIG = {
   // IDs (Settings → the calendar → Event labels). Label names show only to editors;
   // subscribers see the colors. Apple Calendar ignores both.
   STAGES: [
-    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, colorId: '8' }, // Graphite #616161
+    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, colorId: '2' }, // Graphite #616161
     { name: 'Unloading', pattern: /unload/i, colorId: '11' }, // Sage #489160
     { name: 'Cooling', pattern: /\bcool/i, colorId: '6' }, // Peacock #4b99d2
     { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, colorId: '4' }, // Radicchio #c05476
