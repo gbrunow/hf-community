@@ -248,13 +248,24 @@ function readCells_(today, windowStart, windowEnd) {
       continue;
     }
     const rows = sheet.getDataRange().getDisplayValues();
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheet.getId()}/edit`;
+    const gid = sheet.getSheetId();
     for (const cell of cellsFromRows_(rows, year, windowStart, windowEnd)) {
-      cell.sheetUrl = spreadsheet.getUrl();
-      cell.rowUrl = `${cell.sheetUrl}#gid=${sheet.getSheetId()}&range=A${cell.row}`;
+      cell.sheetUrl = sheetUrl;
+      cell.cellUrl = `${sheetUrl}?gid=${gid}#gid=${gid}&range=${columnLetter_(cell.col)}${cell.row}`;
       cells.push(cell);
     }
   }
   return cells;
+}
+
+/** 0 → "A", 25 → "Z", 26 → "AA". */
+function columnLetter_(index) {
+  let letters = '';
+  for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+    letters = String.fromCharCode(65 + ((n - 1) % 26)) + letters;
+  }
+  return letters;
 }
 
 /** Throws on more than one match (e.g. a "Copy of" tab) rather than guess which is live. */
@@ -302,7 +313,7 @@ function cellsFromRows_(rows, year, windowStart, windowEnd) {
         .trim()
         .replace(/\s+/g, ' ');
       // The data range starts at A1, so the sheet row number is the index plus one.
-      if (text) cells.push({ studio, date, text, row: i + 1 });
+      if (text) cells.push({ studio, date, text, row: i + 1, col });
     }
   }
   return cells;
@@ -391,7 +402,7 @@ function validateParsed_(parsed, cell) {
 function createEvents_(calendar, cell, parsed) {
   const description =
     `Original kiln note, ${cell.studio.header}, ${isoDate_(cell.date)}:\n` +
-    `"${cell.text}"\n${cell.rowUrl}\n\n${CONFIG.ATTRIBUTION}`;
+    `"${cell.text}"\n${cell.cellUrl}\n\n${CONFIG.ATTRIBUTION}`;
   const prefix = `${cell.studio.header}: `;
   const ids = [
     calendar
