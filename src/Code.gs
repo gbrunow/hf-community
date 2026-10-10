@@ -32,6 +32,11 @@ const CONFIG = {
   TIMED_EVENT_MINUTES: 30,
   SYNC_EVERY_HOURS: 1, // Apps Script allows 1, 2, 4, 6, 8 or 12.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
+  // Set as each calendar's description and appended to every event, since most calendar
+  // apps never show the calendar description.
+  ATTRIBUTION: 'Unofficial community calendar by Gui Brunow (gbrunow@outlook.com), not an '
+    + "official studio calendar. Built automatically from the studio's kiln notes; times "
+    + 'are approximate.',
 };
 
 const STATE_PREFIX = 'cell:';
@@ -292,7 +297,8 @@ function validateParsed_(parsed, cell) {
 }
 
 function createEvents_(calendar, cell, parsed) {
-  const description = `From the kiln log, ${cell.studio.header}, ${isoDate_(cell.date)}:\n${cell.text}`;
+  const description = `From the kiln log, ${cell.studio.header}, ${isoDate_(cell.date)}:\n`
+    + `${cell.text}\n\n${CONFIG.ATTRIBUTION}`;
   const prefix = `${cell.studio.header}: `;
   const ids = [calendar.createAllDayEvent(prefix + parsed.status, cell.date, { description }).getId()];
   for (const item of parsed.timed) {
@@ -316,7 +322,9 @@ const calendarCache_ = {};
 
 function getCalendar_(name) {
   if (!calendarCache_[name]) {
-    calendarCache_[name] = CalendarApp.getCalendarsByName(name)[0] || CalendarApp.createCalendar(name);
+    const calendar = CalendarApp.getCalendarsByName(name)[0] || CalendarApp.createCalendar(name);
+    if (calendar.getDescription() !== CONFIG.ATTRIBUTION) calendar.setDescription(CONFIG.ATTRIBUTION);
+    calendarCache_[name] = calendar;
   }
   return calendarCache_[name];
 }
