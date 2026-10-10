@@ -339,8 +339,10 @@ function run_({ dryRun, pastDays }) {
     `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
       `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
       `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
-      `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed, ` +
-      `${counts.deferred} left for the next run (out of time).`,
+      `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed` +
+      (counts.deferred
+        ? `, ${counts.deferred} left for the next run (out of time).`
+        : '.'),
   );
 }
 
