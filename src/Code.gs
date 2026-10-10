@@ -35,6 +35,9 @@ const CONFIG = {
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
+  // New notes are sent to Gemini in batches of this size, one request per batch, so a
+  // run costs a request or two instead of one per note.
+  NOTES_PER_REQUEST: 25,
   // Set as each calendar's description and appended to every event, since most calendar
   // apps never show the calendar description. Both also link to the kiln notes.
   ATTRIBUTION:
@@ -65,8 +68,10 @@ const MONTHS = {
   dec: 11,
 };
 
-const SYSTEM_PROMPT = `You read one note from a pottery studio's kiln log. The note describes
-what the kilns are doing on one day at one studio. Reply with JSON:
+const SYSTEM_PROMPT = `You read notes from a pottery studio's kiln log. Each note describes what
+the kilns are doing on one day at one studio. The user message is a JSON list of notes, each
+with an "id", its "date" and "weekday", and the "note" text. Reply with {"results": [...]}
+holding exactly one result per note, with the note's "id" and:
 
 - "status": the note as a short, clean status line. Fix obvious typos and casing. Drop only
   the time details you moved into "timed"; keep everything else, including vague timing.
@@ -81,32 +86,42 @@ what the kilns are doing on one day at one studio. Reply with JSON:
   Vague timing ("in PM", "later", "possible unload") is not a timed item. Use an empty
   list when there are none.
 
-Examples:
-Date 2026-10-09, note "Bisque Loading, reduction cooling (unload 10/10 by 11am)"
-→ {"status":"Bisque loading, reduction cooling","timed":[{"title":"Reduction unload","date":"2026-10-10","time":"11:00"}]}
-Date 2026-06-05, note "Reduction late unload (by 6 ish), bisque loading"
-→ {"status":"Reduction late unload, bisque loading","timed":[{"title":"Reduction unload","date":"2026-06-05","time":"18:00"}]}
-Date 2026-10-10, note "reduction to be cooled, possible unload in PM"
-→ {"status":"Reduction cooling, possible unload in the afternoon","timed":[]}`;
+Examples, note → result:
+{"id":0,"date":"2026-10-09","weekday":"Fri","note":"Bisque Loading, reduction cooling (unload 10/10 by 11am)"}
+→ {"id":0,"status":"Bisque loading, reduction cooling","timed":[{"title":"Reduction unload","date":"2026-10-10","time":"11:00"}]}
+{"id":1,"date":"2026-06-05","weekday":"Fri","note":"Reduction late unload (by 6 ish), bisque loading"}
+→ {"id":1,"status":"Reduction late unload, bisque loading","timed":[{"title":"Reduction unload","date":"2026-06-05","time":"18:00"}]}
+{"id":2,"date":"2026-10-10","weekday":"Sat","note":"reduction to be cooled, possible unload in PM"}
+→ {"id":2,"status":"Reduction cooling, possible unload in the afternoon","timed":[]}`;
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    status: { type: 'STRING' },
-    timed: {
+    results: {
       type: 'ARRAY',
       items: {
         type: 'OBJECT',
         properties: {
-          title: { type: 'STRING' },
-          date: { type: 'STRING' },
-          time: { type: 'STRING' },
+          id: { type: 'INTEGER' },
+          status: { type: 'STRING' },
+          timed: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                title: { type: 'STRING' },
+                date: { type: 'STRING' },
+                time: { type: 'STRING' },
+              },
+              required: ['title', 'date', 'time'],
+            },
+          },
         },
-        required: ['title', 'date', 'time'],
+        required: ['id', 'status', 'timed'],
       },
     },
   },
-  required: ['status', 'timed'],
+  required: ['results'],
 };
 
 /**
@@ -214,45 +229,62 @@ function run_({ dryRun, pastDays }) {
     failed: 0,
   };
 
+  const fresh = [];
   for (const cell of readCells_(today, windowStart, windowEnd)) {
     counts.cells++;
     const key = cellKey_(cell);
     seen.add(key);
     if (state[key]) {
       counts.unchanged++;
-      continue;
+    } else {
+      fresh.push({ cell, key });
     }
+  }
 
-    let parsed;
+  for (let start = 0; start < fresh.length; start += CONFIG.NOTES_PER_REQUEST) {
+    const batch = fresh.slice(start, start + CONFIG.NOTES_PER_REQUEST);
+    let results;
     try {
-      parsed = parseNote_(cell);
+      results = parseNotes_(batch.map(({ cell }) => cell));
     } catch (e) {
-      // Not recorded, so the next run retries it.
-      console.error(`Skipping ${describe_(cell)}: ${e.message}`);
-      counts.failed++;
-      continue;
+      // Later batches would most likely hit the same error (usually a rate limit), so
+      // leave everything left for the next run.
+      console.error(
+        `Skipping ${fresh.length - start} note(s) until the next run: ${e.message}`,
+      );
+      counts.failed += fresh.length - start;
+      break;
     }
 
-    counts.added++;
-    counts.events += 1 + parsed.timed.length;
-    console.log(
-      `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`,
-    );
-    if (dryRun) continue;
+    for (const [id, { cell, key }] of batch.entries()) {
+      const parsed = results[id];
+      if (!parsed) {
+        console.error(`Skipping ${describe_(cell)}: missing from Gemini's reply`);
+        counts.failed++;
+        continue;
+      }
 
-    const ids = createEvents_(
-      getCalendar_(cell.studio.calendarName, cell.sheetUrl),
-      cell,
-      parsed,
-    );
-    props.setProperty(
-      STATE_PREFIX + key,
-      JSON.stringify({
-        calendarName: cell.studio.calendarName,
-        date: isoDate_(cell.date),
-        ids,
-      }),
-    );
+      counts.added++;
+      counts.events += 1 + parsed.timed.length;
+      console.log(
+        `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`,
+      );
+      if (dryRun) continue;
+
+      const ids = createEvents_(
+        getCalendar_(cell.studio.calendarName, cell.sheetUrl),
+        cell,
+        parsed,
+      );
+      props.setProperty(
+        STATE_PREFIX + key,
+        JSON.stringify({
+          calendarName: cell.studio.calendarName,
+          date: isoDate_(cell.date),
+          ids,
+        }),
+      );
+    }
   }
 
   for (const [key, entry] of Object.entries(state)) {
@@ -387,11 +419,19 @@ function parseRowDate_(value, year) {
   return new Date(year, month, Number(match[2]));
 }
 
-function parseNote_(cell) {
+/**
+ * Parses a batch of notes in one Gemini request. Returns results indexed like `cells`;
+ * a note missing from the reply is left undefined.
+ */
+function parseNotes_(cells) {
   const apiKey = requiredProperty_('GEMINI_API_KEY');
-  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
-    cell.date.getDay()
-  ];
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const notes = cells.map((cell, id) => ({
+    id,
+    date: isoDate_(cell.date),
+    weekday: weekdays[cell.date.getDay()],
+    note: cell.text,
+  }));
   const model =
     PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') ||
     CONFIG.DEFAULT_GEMINI_MODEL;
@@ -403,16 +443,7 @@ function parseNote_(cell) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Date ${isoDate_(cell.date)} (${weekday}), note "${cell.text}"`,
-            },
-          ],
-        },
-      ],
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify(notes) }] }],
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
@@ -437,10 +468,19 @@ function parseNote_(cell) {
   }
 
   const body = JSON.parse(response.getContentText());
-  return validateParsed_(
-    JSON.parse(body.candidates[0].content.parts[0].text),
-    cell,
-  );
+  // Skip thought parts, which some models return alongside the answer.
+  const text = body.candidates[0].content.parts
+    .filter((part) => !part.thought)
+    .map((part) => part.text)
+    .join('');
+  const results = [];
+  for (const result of JSON.parse(text).results || []) {
+    const cell = cells[result.id];
+    if (cell && !results[result.id]) {
+      results[result.id] = validateParsed_(result, cell);
+    }
+  }
+  return results;
 }
 
 /** Drops timed items the model got malformed or placed implausibly far from the row. */
