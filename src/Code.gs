@@ -14,6 +14,7 @@
  *        GEMINI_MODEL           replaces CONFIG.DEFAULT_GEMINI_MODEL when Google retires a model.
  *        SYNC_INTERVAL_MINUTES  replaces CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES; sync() picks
  *                               up a change on its next run.
+ *        SYNC_MAX_DAYS_AHEAD    replaces CONFIG.DEFAULT_SYNC_MAX_DAYS_AHEAD.
  *   2. Project Settings → set the time zone to the studio's.
  *   3. Run preview() and check the log. Nothing is written.
  *   4. Run sync() once, then installTrigger().
@@ -30,7 +31,7 @@ const CONFIG = {
   // Only this window is synced. Older rows keep their events but are never revisited,
   // so after-the-fact edits ("to be loaded" → "loaded") don't churn history.
   WINDOW_PAST_DAYS: 1,
-  WINDOW_FUTURE_DAYS: 14,
+  DEFAULT_SYNC_MAX_DAYS_AHEAD: 14, // Overridden by the SYNC_MAX_DAYS_AHEAD script property.
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
@@ -168,6 +169,19 @@ function syncIntervalMinutes_() {
   return minutes;
 }
 
+function syncMaxDaysAhead_() {
+  const value = PropertiesService.getScriptProperties().getProperty(
+    'SYNC_MAX_DAYS_AHEAD',
+  );
+  const days = value ? Number(value) : CONFIG.DEFAULT_SYNC_MAX_DAYS_AHEAD;
+  if (!Number.isInteger(days) || days < 0 || days > 366) {
+    throw new Error(
+      `SYNC_MAX_DAYS_AHEAD is "${value}"; it must be a whole number from 0 to 366`,
+    );
+  }
+  return days;
+}
+
 /**
  * Deletes every event this script created and forgets every cell, so the next sync()
  * rebuilds from scratch. Use after renaming calendars or changing how events look.
@@ -186,7 +200,7 @@ function reset() {
 function run_({ dryRun, pastDays }) {
   const today = startOfDay_(new Date());
   const windowStart = addDays_(today, -pastDays);
-  const windowEnd = addDays_(today, CONFIG.WINDOW_FUTURE_DAYS);
+  const windowEnd = addDays_(today, syncMaxDaysAhead_());
 
   const props = PropertiesService.getScriptProperties();
   const state = loadState_(props);
