@@ -207,6 +207,11 @@ function sync() {
   run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });
 }
 
+function forceSync() {
+  reset();
+  sync();
+}
+
 function installTrigger() {
   const minutes = syncIntervalMinutes_();
   for (const trigger of ScriptApp.getProjectTriggers()) {
