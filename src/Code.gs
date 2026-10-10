@@ -226,6 +226,33 @@ function reset() {
   console.log(`Reset: deleted ${events} event(s). Run sync() to rebuild.`);
 }
 
+/**
+ * Logs the text models this API key can call, for picking a GEMINI_MODEL value. Doesn't
+ * count against the generation quota.
+ */
+function listModels() {
+  const response = UrlFetchApp.fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+    {
+      headers: { 'x-goog-api-key': requiredProperty_('GEMINI_API_KEY') },
+      muteHttpExceptions: true,
+    },
+  );
+  if (response.getResponseCode() !== 200) {
+    throw new Error(
+      `Gemini HTTP ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`,
+    );
+  }
+  const lines = (JSON.parse(response.getContentText()).models || [])
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(
+      (m) =>
+        `${m.name.replace(/^models\//, '')} — ${m.displayName}` +
+        (m.thinking ? ' (thinking)' : ''),
+    );
+  console.log(`${lines.length} models support generateContent:\n${lines.join('\n')}`);
+}
+
 function run_({ dryRun, pastDays }) {
   const startedAt = Date.now();
   const outOfTime = () => Date.now() - startedAt > CONFIG.RUN_TIME_BUDGET_MS;
