@@ -36,9 +36,9 @@ const CONFIG = {
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
-  // New notes are sent to Gemini in batches of this size, one request per batch, so a
-  // run costs a request or two instead of one per note.
-  NOTES_PER_REQUEST: 25,
+  // New notes are sent to Gemini in as few requests as this cap allows, split evenly
+  // (130 notes → two requests of 65), so no request is a near-empty leftover.
+  MAX_NOTES_PER_REQUEST: 100,
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
@@ -253,16 +253,15 @@ function run_({ dryRun, pastDays }) {
     }
   }
 
-  batches: for (
-    let start = 0;
-    start < fresh.length;
-    start += CONFIG.NOTES_PER_REQUEST
-  ) {
+  const batchSize = Math.ceil(
+    fresh.length / Math.ceil(fresh.length / CONFIG.MAX_NOTES_PER_REQUEST),
+  );
+  batches: for (let start = 0; start < fresh.length; start += batchSize) {
     if (outOfTime()) {
       counts.deferred += fresh.length - start;
       break;
     }
-    const batch = fresh.slice(start, start + CONFIG.NOTES_PER_REQUEST);
+    const batch = fresh.slice(start, start + batchSize);
     let results;
     try {
       results = parseNotes_(batch.map(({ cell }) => cell));
