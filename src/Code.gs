@@ -55,7 +55,7 @@ const CONFIG = {
   // stage under Settings → the calendar → Event labels. Apple Calendar ignores event colors.
   STAGES: [
     { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, color: 'GRAY' }, // Graphite #616161
-    { name: 'Unloaded', pattern: /unload/i, color: 'GREEN' }, // Basil #0B8043
+    { name: 'Unloading', pattern: /unload/i, color: 'GREEN' }, // Basil #0B8043
     { name: 'Cooling', pattern: /\bcool/i, color: 'YELLOW' }, // Banana #F6BF26
     { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, color: 'ORANGE' }, // Tangerine #F4511E
     { name: 'Loading', pattern: /\bload/i, color: 'CYAN' }, // Peacock #039BE5
