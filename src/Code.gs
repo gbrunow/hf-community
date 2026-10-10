@@ -17,9 +17,9 @@
  */
 
 const CONFIG = {
-  // One tab per year, e.g. "Kiln Notes 2026". The year in the tab name supplies the
-  // year the date column leaves out.
-  TAB_NAME_PREFIX: 'Kiln Notes ',
+  // One tab per year, found by a name containing this word and the year, case-insensitive
+  // (e.g. "Kiln Notes 2026"). The year also supplies the one the date column leaves out.
+  TAB_KEYWORD: 'kiln',
   STUDIOS: [
     { header: 'Downtown', calendarName: 'Kiln · Downtown' },
     { header: 'JTown', calendarName: 'Kiln · JTown' },
@@ -159,18 +159,31 @@ function readCells_(today, windowStart, windowEnd) {
   const spreadsheet = SpreadsheetApp.openById(requiredProperty_('SOURCE_SPREADSHEET_ID'));
   const cells = [];
   for (let year = windowStart.getFullYear(); year <= windowEnd.getFullYear(); year++) {
-    const tabName = CONFIG.TAB_NAME_PREFIX + year;
-    const sheet = spreadsheet.getSheetByName(tabName);
+    const sheet = findYearTab_(spreadsheet.getSheets(), year);
     if (!sheet) {
       // A missing current-year tab would look like every cell was cleared and wipe the
       // calendars, so fail instead. A missing adjacent year just isn't created yet.
-      if (year === today.getFullYear()) throw new Error(`Tab "${tabName}" not found`);
+      if (year === today.getFullYear()) {
+        throw new Error(`No tab named with "${CONFIG.TAB_KEYWORD}" and ${year}`);
+      }
       continue;
     }
     const rows = sheet.getDataRange().getDisplayValues();
     cells.push(...cellsFromRows_(rows, year, windowStart, windowEnd));
   }
   return cells;
+}
+
+/** Throws on more than one match (e.g. a "Copy of" tab) rather than guess which is live. */
+function findYearTab_(sheets, year) {
+  const matches = sheets.filter((sheet) => {
+    const name = sheet.getName().toLowerCase();
+    return name.includes(CONFIG.TAB_KEYWORD.toLowerCase()) && name.includes(String(year));
+  });
+  if (matches.length > 1) {
+    throw new Error(`Several tabs match ${year}: ${matches.map((s) => `"${s.getName()}"`).join(', ')}`);
+  }
+  return matches[0] || null;
 }
 
 /**
