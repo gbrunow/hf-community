@@ -85,13 +85,16 @@ const RESPONSE_SCHEMA = {
   required: ['status', 'timed'],
 };
 
-function sync() {
-  run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });
-}
-
-/** Logs what sync() would do, over a wider past window so there's more to look at. */
+/**
+ * Logs what sync() would do, over a wider past window so there's more to look at.
+ * Declared first so it's the editor's default Run target.
+ */
 function preview() {
   run_({ dryRun: true, pastDays: 14 });
+}
+
+function sync() {
+  run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });
 }
 
 function installTrigger() {
