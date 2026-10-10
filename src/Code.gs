@@ -471,6 +471,8 @@ function parseNotes_(cells) {
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
+        // Extraction needs little reasoning; the default level took minutes per batch.
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     }),
   };
