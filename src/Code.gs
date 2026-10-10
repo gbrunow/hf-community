@@ -831,8 +831,8 @@ function deleteEvents_(entry) {
   }
 }
 
-// Narrow enough for one line in Apple Calendar on iPhone (19 fit) and Mac (about 18).
-const RULE = '─'.repeat(16);
+// The most that fit on one line in Apple Calendar's event details on iPhone.
+const RULE = '─'.repeat(19);
 
 function shareSection_(calendar) {
   return `${CONFIG.CONTACT}\n\nShare this calendar:\n${subscribeUrl_(calendar)}`;
