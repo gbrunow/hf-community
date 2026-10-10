@@ -25,6 +25,16 @@
  *   4. Run sync() once, then installTrigger().
  */
 
+// Legacy event color ID owned by each calendar label, named after the label's color.
+// Setting an event's color ID applies the label that owns it.
+const eventColor = {
+  graphite: 2, // #616161
+  sage: 11, // #489160
+  peacock: 6, // #4b99d2
+  radicchio: 4, // #c05476
+  mango: 1, // #e0963c
+};
+
 const CONFIG = {
   // One tab per year, found by a name containing this word and the year, case-insensitive
   // (e.g. "Kiln Notes 2026"). The year also supplies the one the date column leaves out.
@@ -74,30 +84,30 @@ const CONFIG = {
     {
       name: 'Closure',
       pattern: /\bclos(ed|es|ing|ure)\b/i,
-      colorId: '2', // Graphite #616161
+      colorId: eventColor.graphite,
       emoji: '🔴',
     },
     {
       name: 'Unloading',
       pattern: /unload/i,
-      colorId: '11', // Sage #489160
+      colorId: eventColor.sage,
       emoji: '🟢',
       remindDaysBefore: [1],
     },
     {
       name: 'Cooling',
       pattern: /\bcool/i,
-      colorId: '6', // Peacock #4b99d2
+      colorId: eventColor.peacock,
     },
     {
       name: 'Firing',
       pattern: /\bfir(e|ed|es|ing)\b/i,
-      colorId: '4', // Radicchio #c05476
+      colorId: eventColor.radicchio,
     },
     {
       name: 'Loading',
       pattern: /\bload/i,
-      colorId: '1', // Mango #e0963c
+      colorId: eventColor.mango,
       emoji: '🔵',
       remindDaysBefore: [1, 2],
     },
@@ -762,7 +772,7 @@ function createEvents_(calendar, cell, parsed) {
   }
   for (const { stage, event } of events) {
     if (!stage) continue;
-    event.setColor(stage.colorId);
+    event.setColor(String(stage.colorId));
     if (stage.remindDaysBefore) {
       event.removeAllReminders();
       for (const days of stage.remindDaysBefore) {
