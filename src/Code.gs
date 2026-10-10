@@ -34,16 +34,27 @@ const CONFIG = {
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
   // Set as each calendar's description and appended to every event, since most calendar
   // apps never show the calendar description.
-  ATTRIBUTION: 'Unofficial community calendar by Gui Brunow (gbrunow@outlook.com), not an '
-    + "official studio calendar. Built automatically from the studio's kiln notes; times "
-    + 'are approximate.',
+  ATTRIBUTION:
+    'Unofficial community calendar by Gui Brunow (gbrunow@outlook.com), not an ' +
+    "official studio calendar. Built automatically from the studio's kiln notes; times " +
+    'are approximate.',
 };
 
 const STATE_PREFIX = 'cell:';
 
 const MONTHS = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11,
 };
 
 const SYSTEM_PROMPT = `You read one note from a pottery studio's kiln log. The note describes
@@ -104,9 +115,13 @@ function sync() {
 
 function installTrigger() {
   for (const trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() === 'sync') ScriptApp.deleteTrigger(trigger);
+    if (trigger.getHandlerFunction() === 'sync')
+      ScriptApp.deleteTrigger(trigger);
   }
-  ScriptApp.newTrigger('sync').timeBased().everyHours(CONFIG.SYNC_EVERY_HOURS).create();
+  ScriptApp.newTrigger('sync')
+    .timeBased()
+    .everyHours(CONFIG.SYNC_EVERY_HOURS)
+    .create();
 }
 
 /**
@@ -132,7 +147,14 @@ function run_({ dryRun, pastDays }) {
   const props = PropertiesService.getScriptProperties();
   const state = loadState_(props);
   const seen = new Set();
-  const counts = { cells: 0, unchanged: 0, added: 0, events: 0, removed: 0, failed: 0 };
+  const counts = {
+    cells: 0,
+    unchanged: 0,
+    added: 0,
+    events: 0,
+    removed: 0,
+    failed: 0,
+  };
 
   for (const cell of readCells_(today, windowStart, windowEnd)) {
     counts.cells++;
@@ -155,15 +177,24 @@ function run_({ dryRun, pastDays }) {
 
     counts.added++;
     counts.events += 1 + parsed.timed.length;
-    console.log(`${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`);
+    console.log(
+      `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${JSON.stringify(parsed)}`,
+    );
     if (dryRun) continue;
 
-    const ids = createEvents_(getCalendar_(cell.studio.calendarName), cell, parsed);
-    props.setProperty(STATE_PREFIX + key, JSON.stringify({
-      calendarName: cell.studio.calendarName,
-      date: isoDate_(cell.date),
-      ids,
-    }));
+    const ids = createEvents_(
+      getCalendar_(cell.studio.calendarName),
+      cell,
+      parsed,
+    );
+    props.setProperty(
+      STATE_PREFIX + key,
+      JSON.stringify({
+        calendarName: cell.studio.calendarName,
+        date: isoDate_(cell.date),
+        ids,
+      }),
+    );
   }
 
   for (const [key, entry] of Object.entries(state)) {
@@ -178,7 +209,9 @@ function run_({ dryRun, pastDays }) {
 
     // Inside the window but no longer in the sheet: the cell was edited or cleared.
     counts.removed += entry.ids.length;
-    console.log(`${dryRun ? 'Would remove' : 'Removed'} ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date}`);
+    console.log(
+      `${dryRun ? 'Would remove' : 'Removed'} ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date}`,
+    );
     if (dryRun) continue;
     deleteEvents_(entry);
     props.deleteProperty(STATE_PREFIX + key);
@@ -186,22 +219,30 @@ function run_({ dryRun, pastDays }) {
 
   console.log(
     `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
-    `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
-    `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
-    `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed.`,
+      `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
+      `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
+      `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed.`,
   );
 }
 
 function readCells_(today, windowStart, windowEnd) {
-  const spreadsheet = SpreadsheetApp.openById(requiredProperty_('SOURCE_SPREADSHEET_ID'));
+  const spreadsheet = SpreadsheetApp.openById(
+    requiredProperty_('SOURCE_SPREADSHEET_ID'),
+  );
   const cells = [];
-  for (let year = windowStart.getFullYear(); year <= windowEnd.getFullYear(); year++) {
+  for (
+    let year = windowStart.getFullYear();
+    year <= windowEnd.getFullYear();
+    year++
+  ) {
     const sheet = findYearTab_(spreadsheet.getSheets(), year);
     if (!sheet) {
       // A missing current-year tab would look like every cell was cleared and wipe the
       // calendars, so fail instead. A missing adjacent year just isn't created yet.
       if (year === today.getFullYear()) {
-        throw new Error(`No tab named with "${CONFIG.TAB_KEYWORD}" and ${year}`);
+        throw new Error(
+          `No tab named with "${CONFIG.TAB_KEYWORD}" and ${year}`,
+        );
       }
       continue;
     }
@@ -215,10 +256,15 @@ function readCells_(today, windowStart, windowEnd) {
 function findYearTab_(sheets, year) {
   const matches = sheets.filter((sheet) => {
     const name = sheet.getName().toLowerCase();
-    return name.includes(CONFIG.TAB_KEYWORD.toLowerCase()) && name.includes(String(year));
+    return (
+      name.includes(CONFIG.TAB_KEYWORD.toLowerCase()) &&
+      name.includes(String(year))
+    );
   });
   if (matches.length > 1) {
-    throw new Error(`Several tabs match ${year}: ${matches.map((s) => `"${s.getName()}"`).join(', ')}`);
+    throw new Error(
+      `Several tabs match ${year}: ${matches.map((s) => `"${s.getName()}"`).join(', ')}`,
+    );
   }
   return matches[0] || null;
 }
@@ -228,13 +274,16 @@ function findYearTab_(sheets, year) {
  * columns have moved between them before.
  */
 function cellsFromRows_(rows, year, windowStart, windowEnd) {
-  const headerIndex = rows.findIndex((row) => String(row[0]).trim().toLowerCase() === 'date');
+  const headerIndex = rows.findIndex(
+    (row) => String(row[0]).trim().toLowerCase() === 'date',
+  );
   if (headerIndex < 0) throw new Error('No header row with "Date" in column A');
 
   const header = rows[headerIndex].map((h) => String(h).trim().toLowerCase());
   const columns = CONFIG.STUDIOS.map((studio) => {
     const col = header.indexOf(studio.header.toLowerCase());
-    if (col < 0) throw new Error(`No "${studio.header}" column in the header row`);
+    if (col < 0)
+      throw new Error(`No "${studio.header}" column in the header row`);
     return { studio, col };
   });
 
@@ -243,7 +292,9 @@ function cellsFromRows_(rows, year, windowStart, windowEnd) {
     const date = parseRowDate_(row[0], year);
     if (!date || date < windowStart || date > windowEnd) continue;
     for (const { studio, col } of columns) {
-      const text = String(row[col] || '').trim().replace(/\s+/g, ' ');
+      const text = String(row[col] || '')
+        .trim()
+        .replace(/\s+/g, ' ');
       if (text) cells.push({ studio, date, text });
     }
   }
@@ -252,7 +303,9 @@ function cellsFromRows_(rows, year, windowStart, windowEnd) {
 
 /** Parses "Fri, Oct 9" (weekday optional) into a local date in the given year. */
 function parseRowDate_(value, year) {
-  const match = String(value).trim().match(/^(?:[A-Za-z]+,?\s+)?([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2})$/);
+  const match = String(value)
+    .trim()
+    .match(/^(?:[A-Za-z]+,?\s+)?([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2})$/);
   if (!match) return null;
   const month = MONTHS[match[1].toLowerCase()];
   if (month === undefined) return null;
@@ -261,9 +314,12 @@ function parseRowDate_(value, year) {
 
 function parseNote_(cell) {
   const apiKey = requiredProperty_('GEMINI_API_KEY');
-  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][cell.date.getDay()];
-  const model = PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL')
-    || CONFIG.DEFAULT_GEMINI_MODEL;
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
+    cell.date.getDay()
+  ];
+  const model =
+    PropertiesService.getScriptProperties().getProperty('GEMINI_MODEL') ||
+    CONFIG.DEFAULT_GEMINI_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const request = {
     method: 'post',
@@ -272,10 +328,16 @@ function parseNote_(cell) {
     muteHttpExceptions: true,
     payload: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{
-        role: 'user',
-        parts: [{ text: `Date ${isoDate_(cell.date)} (${weekday}), note "${cell.text}"` }],
-      }],
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `Date ${isoDate_(cell.date)} (${weekday}), note "${cell.text}"`,
+            },
+          ],
+        },
+      ],
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
@@ -291,18 +353,26 @@ function parseNote_(cell) {
     Utilities.sleep(10000 * attempt); // Free-tier rate limit or transient outage.
   }
   if (response.getResponseCode() !== 200) {
-    throw new Error(`Gemini HTTP ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`);
+    throw new Error(
+      `Gemini HTTP ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`,
+    );
   }
 
   const body = JSON.parse(response.getContentText());
-  return validateParsed_(JSON.parse(body.candidates[0].content.parts[0].text), cell);
+  return validateParsed_(
+    JSON.parse(body.candidates[0].content.parts[0].text),
+    cell,
+  );
 }
 
 /** Drops timed items the model got malformed or placed implausibly far from the row. */
 function validateParsed_(parsed, cell) {
   const status = String(parsed.status || '').trim() || cell.text;
   const timed = (parsed.timed || []).filter((item) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.time)) {
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(item.date) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.time)
+    ) {
       return false;
     }
     const daysAway = Math.abs(parseIsoDate_(item.date) - cell.date) / 86400000;
@@ -312,14 +382,23 @@ function validateParsed_(parsed, cell) {
 }
 
 function createEvents_(calendar, cell, parsed) {
-  const description = `From the kiln log, ${cell.studio.header}, ${isoDate_(cell.date)}:\n`
-    + `${cell.text}\n\n${CONFIG.ATTRIBUTION}`;
+  const description =
+    `From the kiln log, ${cell.studio.header}, ${isoDate_(cell.date)}:\n` +
+    `${cell.text}\n\n${CONFIG.ATTRIBUTION}`;
   const prefix = `${cell.studio.header}: `;
-  const ids = [calendar.createAllDayEvent(prefix + parsed.status, cell.date, { description }).getId()];
+  const ids = [
+    calendar
+      .createAllDayEvent(prefix + parsed.status, cell.date, { description })
+      .getId(),
+  ];
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    ids.push(calendar.createEvent(prefix + item.title, start, end, { description }).getId());
+    ids.push(
+      calendar
+        .createEvent(prefix + item.title, start, end, { description })
+        .getId(),
+    );
   }
   return ids;
 }
@@ -337,8 +416,11 @@ const calendarCache_ = {};
 
 function getCalendar_(name) {
   if (!calendarCache_[name]) {
-    const calendar = CalendarApp.getCalendarsByName(name)[0] || CalendarApp.createCalendar(name);
-    if (calendar.getDescription() !== CONFIG.ATTRIBUTION) calendar.setDescription(CONFIG.ATTRIBUTION);
+    const calendar =
+      CalendarApp.getCalendarsByName(name)[0] ||
+      CalendarApp.createCalendar(name);
+    if (calendar.getDescription() !== CONFIG.ATTRIBUTION)
+      calendar.setDescription(CONFIG.ATTRIBUTION);
     calendarCache_[name] = calendar;
   }
   return calendarCache_[name];
@@ -353,7 +435,8 @@ function requiredProperty_(name) {
 function loadState_(props) {
   const state = {};
   for (const [name, value] of Object.entries(props.getProperties())) {
-    if (name.startsWith(STATE_PREFIX)) state[name.slice(STATE_PREFIX.length)] = JSON.parse(value);
+    if (name.startsWith(STATE_PREFIX))
+      state[name.slice(STATE_PREFIX.length)] = JSON.parse(value);
   }
   return state;
 }
