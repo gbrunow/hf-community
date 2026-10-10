@@ -425,6 +425,9 @@ function parseNote_(cell) {
     response = UrlFetchApp.fetch(url, request);
     const code = response.getResponseCode();
     if ((code !== 429 && code < 500) || attempt === 3) break;
+    console.warn(
+      `Gemini HTTP ${code} on attempt ${attempt}; retrying in ${10 * attempt}s`,
+    );
     Utilities.sleep(10000 * attempt); // Free-tier rate limit or transient outage.
   }
   if (response.getResponseCode() !== 200) {
