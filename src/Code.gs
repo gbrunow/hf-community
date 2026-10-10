@@ -35,7 +35,7 @@ const CONFIG = {
   // Set as each calendar's description and appended to every event, since most calendar
   // apps never show the calendar description.
   ATTRIBUTION:
-    'Unofficial community calendar by Gui Brunow (gbrunow@outlook.com), not an ' +
+    'Unofficial community calendar by Gui Brunow (guilherme.brunow.gomes@gmail.com), not an ' +
     "official studio calendar. Built automatically from the studio's kiln notes; times " +
     'are approximate.',
 };
