@@ -10,8 +10,10 @@
  * Setup:
  *   1. Project Settings → Script properties → add SOURCE_SPREADSHEET_ID (the long id in
  *      the source sheet's URL) and GEMINI_API_KEY. Kept out of the code so pasting in a
- *      new version doesn't wipe them. Optionally add GEMINI_MODEL to override
- *      CONFIG.DEFAULT_GEMINI_MODEL when Google retires a model.
+ *      new version doesn't wipe them. Optional overrides:
+ *        GEMINI_MODEL           replaces CONFIG.DEFAULT_GEMINI_MODEL when Google retires a model.
+ *        SYNC_INTERVAL_MINUTES  replaces CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES; sync() picks
+ *                               up a change on its next run.
  *   2. Project Settings → set the time zone to the studio's.
  *   3. Run preview() and check the log. Nothing is written.
  *   4. Run sync() once, then installTrigger().
@@ -30,7 +32,7 @@ const CONFIG = {
   WINDOW_PAST_DAYS: 1,
   WINDOW_FUTURE_DAYS: 14,
   TIMED_EVENT_MINUTES: 30,
-  SYNC_EVERY_HOURS: 1, // Apps Script allows 1, 2, 4, 6, 8 or 12.
+  DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   DEFAULT_GEMINI_MODEL: 'gemini-3.8-flash', // Overridden by the GEMINI_MODEL script property.
   // Set as each calendar's description and appended to every event, since most calendar
   // apps never show the calendar description. Both also link to the kiln notes.
@@ -42,6 +44,10 @@ const CONFIG = {
 };
 
 const STATE_PREFIX = 'cell:';
+// The interval the current trigger was installed with; Apps Script can't report it.
+const INSTALLED_INTERVAL_PROPERTY = 'trigger:intervalMinutes';
+// The only intervals Apps Script time-based triggers support.
+const ALLOWED_INTERVAL_MINUTES = [1, 5, 10, 15, 30, 60, 120, 240, 360, 480, 720];
 
 const MONTHS = {
   jan: 0,
@@ -111,18 +117,55 @@ function preview() {
 }
 
 function sync() {
+  reconcileTrigger_();
   run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });
 }
 
 function installTrigger() {
+  const minutes = syncIntervalMinutes_();
   for (const trigger of ScriptApp.getProjectTriggers()) {
     if (trigger.getHandlerFunction() === 'sync')
       ScriptApp.deleteTrigger(trigger);
   }
-  ScriptApp.newTrigger('sync')
-    .timeBased()
-    .everyHours(CONFIG.SYNC_EVERY_HOURS)
-    .create();
+  const builder = ScriptApp.newTrigger('sync').timeBased();
+  (minutes < 60
+    ? builder.everyMinutes(minutes)
+    : builder.everyHours(minutes / 60)
+  ).create();
+  PropertiesService.getScriptProperties().setProperty(
+    INSTALLED_INTERVAL_PROPERTY,
+    String(minutes),
+  );
+  console.log(`Installed the sync trigger: every ${minutes} minutes.`);
+}
+
+/** Reinstalls the trigger when SYNC_INTERVAL_MINUTES no longer matches it. */
+function reconcileTrigger_() {
+  const hasTrigger = ScriptApp.getProjectTriggers().some(
+    (trigger) => trigger.getHandlerFunction() === 'sync',
+  );
+  if (!hasTrigger) return; // Never installed: sync() is being run by hand.
+  const installed = Number(
+    PropertiesService.getScriptProperties().getProperty(
+      INSTALLED_INTERVAL_PROPERTY,
+    ),
+  );
+  if (installed !== syncIntervalMinutes_()) installTrigger();
+}
+
+function syncIntervalMinutes_() {
+  const value = PropertiesService.getScriptProperties().getProperty(
+    'SYNC_INTERVAL_MINUTES',
+  );
+  const minutes = value
+    ? Number(value)
+    : CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES;
+  if (!ALLOWED_INTERVAL_MINUTES.includes(minutes)) {
+    throw new Error(
+      `SYNC_INTERVAL_MINUTES is "${value}"; it must be one of ${ALLOWED_INTERVAL_MINUTES.join(', ')}`,
+    );
+  }
+  return minutes;
 }
 
 /**
