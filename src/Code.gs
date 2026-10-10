@@ -67,19 +67,36 @@ const CONFIG = {
   // IDs (Settings → the calendar → Event labels). Label names show only to editors;
   // subscribers see the colors. Apple Calendar ignores both.
   STAGES: [
-    { name: 'Closure', pattern: /\bclos(ed|es|ing|ure)\b/i, colorId: '2' }, // Graphite #616161
+    {
+      name: 'Closure',
+      pattern: /\bclos(ed|es|ing|ure)\b/i,
+      colorId: '2', // Graphite #616161
+      emoji: '⚫',
+    },
     {
       name: 'Unloading',
       pattern: /unload/i,
       colorId: '11', // Sage #489160
+      emoji: '🟢',
       remindDaysBefore: [1],
     },
-    { name: 'Cooling', pattern: /\bcool/i, colorId: '6' }, // Peacock #4b99d2
-    { name: 'Firing', pattern: /\bfir(e|ed|es|ing)\b/i, colorId: '4' }, // Radicchio #c05476
+    {
+      name: 'Cooling',
+      pattern: /\bcool/i,
+      colorId: '6', // Peacock #4b99d2
+      emoji: '🔵',
+    },
+    {
+      name: 'Firing',
+      pattern: /\bfir(e|ed|es|ing)\b/i,
+      colorId: '4', // Radicchio #c05476
+      emoji: '🔴',
+    },
     {
       name: 'Loading',
       pattern: /\bload/i,
       colorId: '1', // Mango #e0963c
+      emoji: '🟠',
       remindDaysBefore: [1, 2],
     },
   ],
@@ -712,16 +729,23 @@ function createEvents_(calendar, cell, parsed) {
     `Original note: "${cell.dateLabel}: ${cell.text}"\n${cell.cellUrl}\n\n` +
     footer_(cell.sheetUrl);
   const options = { description, location: cell.studio.location };
-  const events = parsed.activities.map((activity) =>
-    calendar.createAllDayEvent(activity, cell.date, options),
-  );
+  // The title prefix carries the stage to clients that ignore event colors (Apple Calendar).
+  const titled = (title) => {
+    const stage = stageOf_(title);
+    return { stage, title: stage ? `${stage.emoji} ${title}` : title };
+  };
+  const events = [];
+  for (const activity of parsed.activities) {
+    const { stage, title } = titled(activity);
+    events.push({ stage, event: calendar.createAllDayEvent(title, cell.date, options) });
+  }
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    events.push(calendar.createEvent(item.title, start, end, options));
+    const { stage, title } = titled(item.title);
+    events.push({ stage, event: calendar.createEvent(title, start, end, options) });
   }
-  for (const event of events) {
-    const stage = stageOf_(event.getTitle());
+  for (const { stage, event } of events) {
     if (!stage) continue;
     event.setColor(stage.colorId);
     if (stage.remindDaysBefore) {
@@ -731,7 +755,7 @@ function createEvents_(calendar, cell, parsed) {
       }
     }
   }
-  return events.map((event) => event.getId());
+  return events.map(({ event }) => event.getId());
 }
 
 /**
