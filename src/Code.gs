@@ -35,7 +35,7 @@ const CONFIG = {
   ],
   // Only this window is synced. Older rows keep their events but are never revisited,
   // so after-the-fact edits ("to be loaded" → "loaded") don't churn history.
-  WINDOW_PAST_DAYS: 1,
+  WINDOW_PAST_DAYS: 14,
   DEFAULT_SYNC_MAX_DAYS_AHEAD: 14, // Overridden by the SYNC_MAX_DAYS_AHEAD script property.
   TIMED_EVENT_MINUTES: 30,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
