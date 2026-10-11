@@ -1,0 +1,13 @@
+{
+  "name": "hf-community",
+  "private": true,
+  "description": "Syncs the Higher Fire kiln notes into Google Calendars (Google Apps Script).",
+  "scripts": {
+    "push": "clasp push",
+    "pull": "clasp pull",
+    "logs": "clasp logs"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
+  }
+}
