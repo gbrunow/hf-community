@@ -3,7 +3,7 @@
   "private": true,
   "description": "Syncs the Higher Fire kiln notes into Google Calendars (Google Apps Script).",
   "scripts": {
-    "push": "clasp push",
+    "push": "clasp push --force",
     "pull": "clasp pull",
     "logs": "clasp logs"
   },
