@@ -5,7 +5,8 @@
   "scripts": {
     "push": "clasp push --force",
     "pull": "clasp pull",
-    "logs": "clasp logs"
+    "fn": "clasp run-function",
+    "logs": "clasp tail-logs --simplified"
   },
   "devDependencies": {
     "@google/clasp": "^3.4.1"
