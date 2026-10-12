@@ -147,7 +147,7 @@ holding exactly one result per note, with the note's "id" and:
   each of which becomes its own calendar event. Fix obvious typos and casing, and spell
   out kiln names: Redux/Rdx/Red → Reduction, Ox/Oxy → Oxidation, Bisq/Bisk → Bisque,
   E bisque → Electric bisque, Unldd → unloaded. Keep qualifiers and vague timing
-  ("for Vasudha's class", "possibly in the afternoon"). Leave out anything you moved into
+  ("for Alex's class", "possibly in the afternoon"). Leave out anything you moved into
   "timed". Never add information.
 - "timed": one item per thing that happens at a specific clock time. Approximate times
   count ("~4pm", "6 ish", "around 5pm"). Each item has:
@@ -166,8 +166,8 @@ Examples, note → result:
 → {"id":1,"activities":["Bisque loading"],"timed":[{"title":"Reduction unload (late)","date":"2026-06-05","time":"18:00"}]}
 {"id":2,"date":"2026-10-10","weekday":"Sat","note":"reduction to be cooled, possible unload in PM"}
 → {"id":2,"activities":["Reduction cooling","Reduction possibly unloaded in the afternoon"],"timed":[]}
-{"id":3,"date":"2026-10-02","weekday":"Fri","note":"Reduction unloaded, Bisque loading, Lowfire bisque for Vasudha's class loaded"}
-→ {"id":3,"activities":["Reduction unloaded","Bisque loading","Lowfire bisque loaded (Vasudha's class)"],"timed":[]}`;
+{"id":3,"date":"2026-10-02","weekday":"Fri","note":"Reduction unloaded, Bisque loading, Lowfire bisque for Alex's class loaded"}
+→ {"id":3,"activities":["Reduction unloaded","Bisque loading","Lowfire bisque loaded (Alex's class)"],"timed":[]}`;
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
