@@ -6,7 +6,8 @@
     "push": "clasp push --force",
     "pull": "clasp pull",
     "fn": "clasp run-function",
-    "logs": "clasp tail-logs --simplified"
+    "logs": "clasp tail-logs --simplified",
+    "test": "node --test \"test/*.test.js\""
   },
   "devDependencies": {
     "@google/clasp": "^3.4.1"
