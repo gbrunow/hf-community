@@ -36,4 +36,5 @@ The script is `src/Code.gs`; setup steps and settings are in the comment at its 
 
     npm install
     npx clasp login
+    npm test
     npm run push
