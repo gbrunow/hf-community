@@ -71,12 +71,12 @@ const CONFIG = {
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
-  // Calendar label per kiln stage, from the first pattern matching the event title (so
-  // "unload" is checked before "load"). The API can't set a label directly: each label
-  // owns one of the 11 legacy color IDs, and setting that ID applies it. An ID with no
-  // label on a calendar is dropped, so every studio calendar needs these labels on these
-  // IDs (Settings → the calendar → Event labels). Label names show only to editors;
-  // subscribers see the colors. Apple Calendar ignores both.
+  // Calendar label per kiln stage, from the first pattern matching the event title. The
+  // API can't set a label directly: each label owns one of the 11 legacy color IDs, and
+  // setting that ID applies it. An ID with no label on a calendar is dropped, so every
+  // studio calendar needs these labels on these IDs (Settings → the calendar → Event
+  // labels). Label names show only to editors; subscribers see the colors. Apple
+  // Calendar ignores both.
   STAGES: [
     {
       name: 'Closure',
