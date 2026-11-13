@@ -1,15 +1,17 @@
-// Runs src/Code.gs against fake Apps Script services, the way Apps Script runs it: one
-// global scope shared by every function and constant in the file.
+// Runs the script in src/ against fake Apps Script services.
 
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const CODE = fs.readFileSync(
-  path.join(__dirname, '..', 'src', 'Code.gs'),
-  'utf8',
-);
+// Apps Script evaluates each file of a project separately, in one shared global scope.
+const SRC = path.join(__dirname, '..', 'src');
+const FILES = fs
+  .readdirSync(SRC)
+  .filter((name) => name.endsWith('.js'))
+  .sort()
+  .map((name) => ({ name, code: fs.readFileSync(path.join(SRC, name), 'utf8') }));
 
 const DEFAULT_TODAY = '2026-10-09T10:00:00';
 
@@ -76,7 +78,9 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
   };
 
   world.context = vm.createContext(globals);
-  vm.runInContext(CODE, world.context, { filename: 'Code.gs' });
+  for (const file of FILES) {
+    vm.runInContext(file.code, world.context, { filename: file.name });
+  }
   world.fn = world.context; // Top-level functions become context properties.
   world.eval = (expression) => vm.runInContext(expression, world.context);
 
