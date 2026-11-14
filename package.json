@@ -3,13 +3,17 @@
   "private": true,
   "description": "Syncs the Higher Fire kiln notes into Google Calendars (Google Apps Script).",
   "scripts": {
+    "check": "tsc -p .",
+    "test": "node --test \"test/*.test.js\"",
+    "verify": "npm run check && npm test",
     "push": "clasp push --force",
     "pull": "clasp pull",
     "fn": "clasp run-function",
-    "logs": "clasp tail-logs --simplified",
-    "test": "node --test \"test/*.test.js\""
+    "logs": "clasp tail-logs --simplified"
   },
   "devDependencies": {
-    "@google/clasp": "^3.4.1"
+    "@google/clasp": "^3.4.1",
+    "@types/google-apps-script": "^2.0.15",
+    "typescript": "^7.0.2"
   }
 }

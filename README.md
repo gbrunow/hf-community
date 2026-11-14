@@ -36,5 +36,5 @@ The script lives in `src/`: setup steps are at the top of `src/main.js`, setting
 
     npm install
     npx clasp login
-    npm test
+    npm run verify   # type-check, then run the tests
     npm run push
