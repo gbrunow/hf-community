@@ -59,6 +59,10 @@ const RESPONSE_SCHEMA = {
   required: ['results'],
 };
 
+/**
+ * @param {boolean} forPreview
+ * @returns {string}
+ */
 function geminiModel_(forPreview) {
   const props = PropertiesService.getScriptProperties();
   return (
@@ -71,6 +75,10 @@ function geminiModel_(forPreview) {
 /**
  * Parses a batch of notes in one Gemini request. Returns results indexed like `cells`;
  * a note missing from the reply is left undefined.
+ *
+ * @param {Cell[]} cells
+ * @param {string} model
+ * @returns {(Parsed | undefined)[]}
  */
 function parseNotes_(cells, model) {
   const apiKey = requiredProperty_('GEMINI_API_KEY');
@@ -85,6 +93,7 @@ function parseNotes_(cells, model) {
     PropertiesService.getScriptProperties().getProperty(
       'GEMINI_THINKING_LEVEL',
     ) || CONFIG.DEFAULT_GEMINI_THINKING_LEVEL;
+  /** @type {Record<string, unknown>} */
   const generationConfig = {
     responseMimeType: 'application/json',
     responseSchema: RESPONSE_SCHEMA,
@@ -93,6 +102,7 @@ function parseNotes_(cells, model) {
     generationConfig.thinkingConfig = { thinkingLevel };
   }
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  /** @type {GoogleAppsScript.URL_Fetch.URLFetchRequestOptions} */
   const request = {
     method: 'post',
     contentType: 'application/json',
@@ -123,12 +133,14 @@ function parseNotes_(cells, model) {
     );
   }
 
+  /** @type {{ candidates: { content: { parts: { text: string, thought?: boolean }[] } }[] }} */
   const body = JSON.parse(response.getContentText());
   // Skip thought parts, which some models return alongside the answer.
   const text = body.candidates[0].content.parts
     .filter((part) => !part.thought)
     .map((part) => part.text)
     .join('');
+  /** @type {(Parsed | undefined)[]} */
   const results = [];
   for (const result of JSON.parse(text).results || []) {
     const cell = cells[result.id];
@@ -142,6 +154,10 @@ function parseNotes_(cells, model) {
 /**
  * Drops timed items the model got malformed or placed implausibly far from the row, and
  * falls back to the raw note when nothing usable is left.
+ *
+ * @param {RawParsed} parsed
+ * @param {Cell} cell
+ * @returns {Parsed}
  */
 function validateParsed_(parsed, cell) {
   const activities = (parsed.activities || [])
@@ -154,7 +170,8 @@ function validateParsed_(parsed, cell) {
     ) {
       return false;
     }
-    const daysAway = Math.abs(parseIsoDate_(item.date) - cell.date) / 86400000;
+    const daysAway =
+      Math.abs(parseIsoDate_(item.date).getTime() - cell.date.getTime()) / 86400000;
     return daysAway <= 7;
   });
   if (!activities.length && !timed.length) activities.push(cell.text);

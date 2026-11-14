@@ -1,3 +1,9 @@
+/**
+ * @param {StudioCalendar} calendar
+ * @param {Cell} cell
+ * @param {Parsed} parsed
+ * @returns {string[]}
+ */
 function createEvents_(calendar, cell, parsed) {
   const description = [
     `Original note (${cell.dateLabel}):`,
@@ -11,10 +17,12 @@ function createEvents_(calendar, cell, parsed) {
   const options = { description, location: cell.studio.location };
   // A stage's optional emoji prefixes the title, carrying the stage to clients that
   // ignore event colors (Apple Calendar).
+  /** @param {string} title */
   const titled = (title) => {
     const stage = stageOf_(title);
     return { stage, title: stage?.emoji ? `${stage.emoji} ${title}` : title };
   };
+  /** @type {{ stage: Stage | null, event: CalendarEventHandle }[]} */
   const events = [];
   for (const activity of parsed.activities) {
     const { stage, title } = titled(activity);
@@ -38,10 +46,17 @@ function createEvents_(calendar, cell, parsed) {
   return events.map(({ event }) => event.getId());
 }
 
+/**
+ * @param {string} title
+ * @returns {Stage | null}
+ */
 function stageOf_(title) {
   return CONFIG.STAGES.find((stage) => stage.pattern.test(title)) || null;
 }
 
+/**
+ * @param {SyncedEntry} entry
+ */
 function deleteEvents_(entry) {
   const calendar = CalendarApp.getCalendarsByName(entry.calendarName)[0];
   if (!calendar) return;
@@ -54,17 +69,32 @@ function deleteEvents_(entry) {
 // The most that fit on one line in Apple Calendar's event details on iPhone.
 const RULE = '─'.repeat(19);
 
+/**
+ * @param {StudioCalendar} calendar
+ * @returns {string}
+ */
 function shareSection_(calendar) {
   return `${CONFIG.CONTACT}\n\nShare this calendar:\n${subscribeUrl_(calendar)}`;
 }
 
+/** @type {Record<string, StudioCalendar>} */
 const calendarCache_ = {};
 
-/** The calendar's public iCal feed as a webcal:// link, which opens a subscribe prompt. */
+/**
+ * The calendar's public iCal feed as a webcal:// link, which opens a subscribe prompt.
+ *
+ * @param {StudioCalendar} calendar
+ * @returns {string}
+ */
 function subscribeUrl_(calendar) {
   return `webcal://calendar.google.com/calendar/ical/${encodeURIComponent(calendar.getId())}/public/basic.ics`;
 }
 
+/**
+ * @param {string} name
+ * @param {string} sheetUrl
+ * @returns {StudioCalendar}
+ */
 function getCalendar_(name, sheetUrl) {
   if (!calendarCache_[name]) {
     const calendar =

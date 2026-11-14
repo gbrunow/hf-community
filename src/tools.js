@@ -44,7 +44,9 @@ function listModels() {
       `Gemini HTTP ${response.getResponseCode()}: ${response.getContentText().slice(0, 300)}`,
     );
   }
-  const lines = (JSON.parse(response.getContentText()).models || [])
+  /** @type {{ models?: { name: string, displayName: string, supportedGenerationMethods?: string[], thinking?: boolean }[] }} */
+  const reply = JSON.parse(response.getContentText());
+  const lines = (reply.models || [])
     .filter((m) =>
       (m.supportedGenerationMethods || []).includes('generateContent'),
     )
@@ -119,6 +121,9 @@ function inspectEventColors() {
   for (const studio of CONFIG.STUDIOS) {
     const calendar = CalendarApp.getCalendarsByName(studio.calendarName)[0];
     if (!calendar) continue;
+    if (!Calendar?.Events) {
+      throw new Error('Enable the Google Calendar API advanced service first.');
+    }
     const { items = [] } = Calendar.Events.list(calendar.getId(), {
       timeMin: addDays_(today, -2).toISOString(),
       timeMax: addDays_(today, 14).toISOString(),
@@ -126,9 +131,11 @@ function inspectEventColors() {
       orderBy: 'startTime',
     });
     const lines = items.map((item) => {
-      const extra = Object.keys(item).filter((key) => !standard.has(key));
-      const extras = extra.map((key) => `${key}=${JSON.stringify(item[key])}`);
-      return `${item.start.date || item.start.dateTime}  colorId=${item.colorId || '-'}  ${item.summary}${extras.length ? `  ${extras.join(' ')}` : ''}`;
+      const fields = /** @type {Record<string, unknown>} */ (item);
+      const extra = Object.keys(fields).filter((key) => !standard.has(key));
+      const extras = extra.map((key) => `${key}=${JSON.stringify(fields[key])}`);
+      const start = item.start?.date || item.start?.dateTime;
+      return `${start}  colorId=${item.colorId || '-'}  ${item.summary}${extras.length ? `  ${extras.join(' ')}` : ''}`;
     });
     console.log(`${studio.calendarName}:\n${lines.join('\n')}`);
   }

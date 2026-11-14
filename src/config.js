@@ -14,6 +14,7 @@ const CONFIG = {
   TAB_KEYWORD: 'kiln',
   // A disabled studio isn't read; its synced events inside the window are removed on the
   // next sync, like any cleared note. Older events and the calendar itself stay.
+  /** @type {Studio[]} */
   STUDIOS: [
     {
       enabled: true,
@@ -50,6 +51,7 @@ const CONFIG = {
   // studio calendar needs these labels on these IDs (Settings → the calendar → Event
   // labels). Label names show only to editors; subscribers see the colors. Apple
   // Calendar ignores both.
+  /** @type {Stage[]} */
   STAGES: [
     {
       name: 'Closure',

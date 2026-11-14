@@ -1,5 +1,8 @@
 const STATE_PREFIX = 'cell:';
 
+/**
+ * @param {{ dryRun: boolean, pastDays: number }} options
+ */
 function run_({ dryRun, pastDays }) {
   const startedAt = Date.now();
   const outOfTime = () => Date.now() - startedAt > CONFIG.RUN_TIME_BUDGET_MS;
@@ -21,6 +24,7 @@ function run_({ dryRun, pastDays }) {
   };
 
   const model = geminiModel_(dryRun);
+  /** @type {{ cell: Cell, key: string }[]} */
   const fresh = [];
   for (const cell of readCells_(today, windowStart, windowEnd)) {
     counts.cells++;
@@ -42,6 +46,7 @@ function run_({ dryRun, pastDays }) {
       break;
     }
     const batch = fresh.slice(start, start + batchSize);
+    /** @type {(Parsed | undefined)[]} */
     let results;
     try {
       results = parseNotes_(
@@ -52,7 +57,7 @@ function run_({ dryRun, pastDays }) {
       // Later batches would most likely hit the same error (usually a rate limit), so
       // leave everything left for the next run.
       console.error(
-        `Skipping ${fresh.length - start} note(s) until the next run: ${e.message}`,
+        `Skipping ${fresh.length - start} note(s) until the next run: ${e instanceof Error ? e.message : e}`,
       );
       counts.failed += fresh.length - start;
       break;
@@ -127,8 +132,14 @@ function run_({ dryRun, pastDays }) {
   );
 }
 
-/** "Bisque loading [Loading] · 2026-10-10 11:00 Reduction unload [Unloaded]" */
+/**
+ * "Bisque loading [Loading] · 2026-10-10 11:00 Reduction unload [Unloaded]"
+ *
+ * @param {Parsed} parsed
+ * @returns {string}
+ */
 function describeParsed_(parsed) {
+  /** @param {string} title */
   const label = (title) => `${title} [${stageOf_(title)?.name || 'no stage'}]`;
   return [
     ...parsed.activities.map(label),
@@ -138,7 +149,12 @@ function describeParsed_(parsed) {
   ].join(' · ');
 }
 
+/**
+ * @param {ScriptProperties} props
+ * @returns {Record<string, SyncedEntry>}
+ */
 function loadState_(props) {
+  /** @type {Record<string, SyncedEntry>} */
   const state = {};
   for (const [name, value] of Object.entries(props.getProperties())) {
     if (name.startsWith(STATE_PREFIX))
@@ -147,6 +163,10 @@ function loadState_(props) {
   return state;
 }
 
+/**
+ * @param {Pick<RowCell, 'studio' | 'date' | 'text'>} cell
+ * @returns {string}
+ */
 function cellKey_(cell) {
   const digest = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
@@ -156,6 +176,10 @@ function cellKey_(cell) {
   return Utilities.base64EncodeWebSafe(digest).slice(0, 22);
 }
 
+/**
+ * @param {Pick<RowCell, 'studio' | 'date' | 'text'>} cell
+ * @returns {string}
+ */
 function describe_(cell) {
   return `${cell.studio.header} ${isoDate_(cell.date)} "${cell.text}"`;
 }
