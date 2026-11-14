@@ -41,6 +41,14 @@ function preview() {
   run_({ dryRun: true, pastDays: 14 });
 }
 
+/**
+ * Like preview(), but parses every note again instead of skipping the ones already synced,
+ * to see what a full re-parse would produce. Writes nothing.
+ */
+function previewAll() {
+  run_({ dryRun: true, pastDays: 14, ignoreState: true });
+}
+
 function sync() {
   reconcileTrigger_();
   run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });

@@ -8,9 +8,11 @@
  */
 
 /**
- * @param {{ dryRun: boolean, pastDays: number }} options
+ * @param {{ dryRun: boolean, pastDays: number, ignoreState?: boolean }} options ignoreState
+ *   treats every item as new, to see what a full re-parse would produce; only with dryRun.
  */
-function run_({ dryRun, pastDays }) {
+function run_({ dryRun, pastDays, ignoreState = false }) {
+  if (ignoreState && !dryRun) throw new Error('ignoreState needs dryRun');
   const startedAt = Date.now();
   const outOfTime = () => Date.now() - startedAt > CONFIG.RUN_TIME_BUDGET_MS;
   const today = startOfDay_(new Date());
@@ -39,7 +41,7 @@ function run_({ dryRun, pastDays }) {
   // Every source is read before anything is written, so a source that can't be read
   // (say, a missing tab) fails the run instead of looking like every item was cleared.
   const runs = sources_().map((source) => {
-    const state = loadState_(props, source.statePrefix);
+    const state = ignoreState ? {} : loadState_(props, source.statePrefix);
     /** @type {Set<string>} */
     const seen = new Set();
     /** @type {Item<any>[]} */
