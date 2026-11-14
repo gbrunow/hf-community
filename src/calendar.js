@@ -5,15 +5,11 @@
  * @returns {string[]}
  */
 function createEvents_(calendar, cell, parsed) {
-  const description = [
-    `Original note (${cell.dateLabel}):`,
-    `"${cell.text}"\n${cell.rowUrl}`,
-    RULE,
-    shareSection_(calendar),
-    RULE,
-    CONFIG.DISCLAIMER,
-    `${CONFIG.AI_NOTICE} Check the original note before relying on an event.`,
-  ].join('\n\n');
+  const description = eventDescription_(
+    calendar,
+    `Original note (${cell.dateLabel}):\n\n"${cell.text}"\n${cell.rowUrl}`,
+    'Check the original note before relying on an event.',
+  );
   const options = { description, location: cell.studio.location };
   // A stage's optional emoji prefixes the title, carrying the stage to clients that
   // ignore event colors (Apple Calendar).
@@ -68,6 +64,25 @@ function deleteEvents_(entry) {
 
 // The most that fit on one line in Apple Calendar's event details on iPhone.
 const RULE = '─'.repeat(19);
+
+/**
+ * An event's description: what it came from, then the contact, disclaimer and AI notice.
+ *
+ * @param {StudioCalendar} calendar
+ * @param {string} source what the event came from, with a link to it
+ * @param {string} check the sentence telling people where to confirm the event
+ * @returns {string}
+ */
+function eventDescription_(calendar, source, check) {
+  return [
+    source,
+    RULE,
+    shareSection_(calendar),
+    RULE,
+    CONFIG.DISCLAIMER,
+    `${CONFIG.AI_NOTICE} ${check}`,
+  ].join('\n\n');
+}
 
 /**
  * @param {StudioCalendar} calendar
