@@ -142,7 +142,8 @@ function inspectEventColors() {
 }
 
 /**
- * Lists the events on each enabled studio calendar for a day, with the note each came from.
+ * Lists the events on each enabled studio's calendars (main and classes) for a day, with
+ * the note each came from.
  * Run it with `npm run fn -- eventsOn -p '["2026-11-15"]'`.
  *
  * @param {string} iso YYYY-MM-DD
@@ -151,10 +152,13 @@ function inspectEventColors() {
 function eventsOn(iso) {
   const day = parseIsoDate_(iso);
   const lines = [];
-  for (const studio of CONFIG.STUDIOS.filter((s) => s.enabled)) {
-    const calendar = CalendarApp.getCalendarsByName(studio.calendarName)[0];
+  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
+    s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
+  );
+  for (const name of names) {
+    const calendar = CalendarApp.getCalendarsByName(name)[0];
     if (!calendar) continue;
-    lines.push(`${studio.calendarName}:`);
+    lines.push(`${name}:`);
     for (const event of calendar.getEventsForDay(day)) {
       const when = event.isAllDayEvent()
         ? 'all day'
@@ -204,4 +208,46 @@ function eventsTabRows(iso) {
       (record) => `${record.kind} row ${record.rowNumber}: ${JSON.stringify(record.fields)}`,
     ),
   );
+}
+
+/**
+ * Sends the given days to Gemini exactly as a sync would and reports how many of the events
+ * it returned lack a start or an end time, without writing anything. Run it with
+ * `npm run fn -- tryEventDays -p '["classes",["2026-11-20","2026-11-21"]]'`.
+ *
+ * @param {'classes' | 'closures'} kind
+ * @param {string[]} isoDates YYYY-MM-DD
+ * @returns {string}
+ */
+function tryEventDays(kind, isoDates) {
+  const studio = CONFIG.STUDIOS.find((s) => s.enabled && s.eventsTab);
+  if (!studio) return 'No studio has an events tab.';
+  const recordKinds = kind === 'classes' ? ['schedule'] : ['announcement', 'side'];
+  const times = isoDates.map((iso) => parseIsoDate_(iso).getTime());
+  const window = {
+    today: startOfDay_(new Date()),
+    windowStart: new Date(Math.min(...times)),
+    windowEnd: new Date(Math.max(...times)),
+  };
+  const { records } = readEventsTab_(studio, window);
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const days = isoDates.map((iso, id) => ({
+    id,
+    date: iso,
+    weekday: weekdays[parseIsoDate_(iso).getDay()],
+    rows: records
+      .filter((r) => recordKinds.includes(r.kind) && isoDate_(r.date) === iso)
+      .map((r) => r.fields),
+  }));
+  const reply = callGemini_({
+    systemPrompt: kind === 'classes' ? CLASSES_PROMPT : CLOSURES_PROMPT,
+    schema: EVENTS_SCHEMA,
+    input: days,
+    model: geminiModel_(true),
+  });
+  /** @type {{ title: string, start?: string, end?: string }[]} */
+  const events = (reply.results || []).flatMap((/** @type {{ events?: RawDayEvent[] }} */ r) => r.events || []);
+  const withoutTimes = events.filter((e) => !e.start || !e.end);
+  return `${days.length} days sent, ${events.length} events back, ${withoutTimes.length} missing a start or an end` +
+    (withoutTimes.length ? `; first: ${JSON.stringify(withoutTimes[0])}` : '');
 }

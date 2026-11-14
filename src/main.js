@@ -123,15 +123,38 @@ function syncMaxDaysAhead_() {
  */
 function reset() {
   const props = PropertiesService.getScriptProperties();
-  let events = 0;
-  for (const source of sources_()) {
-    for (const [key, entry] of Object.entries(
-      loadState_(props, source.statePrefix),
-    )) {
-      deleteEvents_(entry);
-      events += entry.ids.length;
-      props.deleteProperty(source.statePrefix + key);
-    }
-  }
+  const events = sources_().reduce((sum, source) => sum + clearSource_(source, props), 0);
   console.log(`Reset: deleted ${events} event(s). Run sync() to rebuild.`);
+}
+
+/**
+ * Like reset(), for one source: deletes the events it created and forgets its items, so the
+ * next sync() rebuilds just those. Run it with `npm run fn -- resetSource -p '["classes"]'`.
+ *
+ * @param {string} name a source's name, such as "kiln", "discard", "classes" or "closures"
+ */
+function resetSource(name) {
+  const source = sources_().find((s) => s.name === name);
+  if (!source) {
+    throw new Error(
+      `No source named "${name}"; the sources are ${sources_().map((s) => s.name).join(', ')}`,
+    );
+  }
+  const events = clearSource_(source, PropertiesService.getScriptProperties());
+  console.log(`Reset ${name}: deleted ${events} event(s). Run sync() to rebuild.`);
+}
+
+/**
+ * @param {Source<any, any>} source
+ * @param {ScriptProperties} props
+ * @returns {number} how many events were deleted
+ */
+function clearSource_(source, props) {
+  let events = 0;
+  for (const [key, entry] of Object.entries(loadState_(props, source.statePrefix))) {
+    deleteEvents_(entry);
+    events += entry.ids.length;
+    props.deleteProperty(source.statePrefix + key);
+  }
+  return events;
 }

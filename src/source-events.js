@@ -29,7 +29,7 @@ const EVENTS_SCHEMA = {
                 wheels: { type: 'STRING' },
                 handBuilding: { type: 'STRING' },
               },
-              required: ['title'],
+              required: ['title', 'start', 'end', 'wheels', 'handBuilding'],
             },
           },
         },
@@ -51,17 +51,16 @@ order. Each event has:
   else as written.
 - "start" and "end": HH:MM, 24-hour. Class times fall within studio hours, 09:00-21:59, so a
   time written before 9 AM (such as "3:00 AM") is a typo for the same hour in the afternoon.
-  Leave both out when the row has no usable start and end.
-- "wheels": the "# of Wheels" cell copied exactly as written; leave it out when the row has
+  Use "" for both when the row has no usable start and end.
+- "wheels": the "# of Wheels" cell copied exactly as written; "" when the row has none.
+- "handBuilding": the "Hand-building" cell copied exactly as written; "" when the row has
   none.
-- "handBuilding": the "Hand-building" cell copied exactly as written; leave it out when the
-  row has none.
 
-Never add information, and never change a number.
+Every event has all five fields. Never add information, and never change a number.
 
 Example, day → result:
 {"id":0,"date":"2026-09-05","weekday":"Sat","rows":[{"Start":"3:00 AM","End":"5:00 AM","Event":"Take a Spin","# of Wheels":"6"},{"Start":"10:00 AM","End":"12:00 PM","Event":"Let's Roll","Hand-building":"8 seats plus tools"}]}
-→ {"id":0,"events":[{"title":"Take a Spin","start":"15:00","end":"17:00","wheels":"6"},{"title":"Let's Roll","start":"10:00","end":"12:00","handBuilding":"8 seats plus tools"}]}`;
+→ {"id":0,"events":[{"title":"Take a Spin","start":"15:00","end":"17:00","wheels":"6","handBuilding":""},{"title":"Let's Roll","start":"10:00","end":"12:00","wheels":"","handBuilding":"8 seats plus tools"}]}`;
 
 const CLOSURES_PROMPT = `You read announcements from a pottery studio's event sheet: closures, early closings and
 workshops. The user message is a JSON list of days, each with an "id", its "date" and
@@ -74,18 +73,20 @@ those cells. Reply with {"results": [...]} holding exactly one result per day, w
   Memorial Day", "Studio closing at 4pm for workshop set up", "Extruder 1 with Sam Rivera").
   Fix obvious typos and use sentence case. Never add information.
 - "start" and "end": HH:MM, 24-hour, only for a workshop or event that has both a start and
-  an end time ("10am-1pm" is 10:00 to 13:00). Leave both out for closures and for anything
+  an end time ("10am-1pm" is 10:00 to 13:00). Use "" for both for closures and for anything
   else. An hour without am/pm falls within studio hours, 09:00-21:59.
 - "wheels": the number of wheels, copied exactly as written, when the announcement gives
-  one; otherwise leave it out.
+  one; otherwise "".
 - "handBuilding": the hand-building area, copied exactly as written (such as
-  "Hand-building"), when the announcement names one; otherwise leave it out.
+  "Hand-building"), when the announcement names one; otherwise "".
+
+Every event has all five fields.
 
 Examples, day → result:
 {"id":0,"date":"2026-05-25","weekday":"Mon","rows":[{"Start":"STUDIO CLOSED FOR MEMORIAL DAY"}]}
-→ {"id":0,"events":[{"title":"Studio closed for Memorial Day"}]}
+→ {"id":0,"events":[{"title":"Studio closed for Memorial Day","start":"","end":"","wheels":"","handBuilding":""}]}
 {"id":1,"date":"2026-01-10","weekday":"Sat","rows":[{"Side table":"Sat, Jan 10 | 10am-1pm | Extruder 1 with Sam Rivera | Hand-building"}]}
-→ {"id":1,"events":[{"title":"Extruder 1 with Sam Rivera","start":"10:00","end":"13:00","handBuilding":"Hand-building"}]}`;
+→ {"id":1,"events":[{"title":"Extruder 1 with Sam Rivera","start":"10:00","end":"13:00","wheels":"","handBuilding":"Hand-building"}]}`;
 
 /** @returns {Source<EventsPayload, EventsResult>} */
 function classesSource_() {
@@ -247,7 +248,7 @@ function validateDayEvents_(raw, payload) {
         end = afterOpening_(end ?? '');
       }
       if (!valid || (end ?? '') <= (start ?? '')) {
-        console.warn(`${payload.studio.header} ${payload.iso}: "${title}" has unusable times ${start}-${end}; made all-day.`);
+        console.warn(`${payload.studio.header} ${payload.iso}: "${title}" has unusable times, made all-day; Gemini sent ${JSON.stringify(event)}`);
         start = end = undefined;
       }
     }

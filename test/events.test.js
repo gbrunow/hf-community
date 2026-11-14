@@ -360,3 +360,47 @@ test('the kiln notes keep syncing alongside the events tab', () => {
   assert.ok(world.events(DT).some((e) => e.title.includes('Bisque')));
   assert.equal(world.state().length, 9);
 });
+
+test('empty strings, which the schema requires for a missing value, read as none', () => {
+  const world = newWorld();
+  const real = world.gemini.parseDays;
+  world.gemini.parseDays = (kind, days) => {
+    const reply = real(kind, days);
+    for (const result of reply.results) {
+      for (const event of result.events) {
+        for (const field of ['start', 'end', 'wheels', 'handBuilding']) {
+          if (event[field] === undefined) event[field] = '';
+        }
+      }
+    }
+    return reply;
+  };
+
+  world.fn.sync();
+
+  assert.equal(classes(world).length, 7);
+  assert.ok(closures(world).includes('2026-10-12 all day 🔴 STUDIO CLOSED FOR THE HOLIDAY'));
+  assert.deepEqual(warnings(world).filter((w) => /dropped|unusable/.test(w)), []);
+});
+
+test('resetSource removes one source\'s events and leaves the others', () => {
+  const world = newWorld();
+  world.fn.sync();
+  const kiln = world.events(DT).filter((e) => e.description.includes('Original note (')).length;
+
+  world.fn.resetSource('classes');
+
+  assert.deepEqual(classes(world), []);
+  assert.equal(closures(world).length, 4, 'closures untouched');
+  assert.equal(world.events(DT).filter((e) => e.description.includes('Original note (')).length, kiln);
+  assert.deepEqual(Object.keys(world.props).filter((k) => k.startsWith('classes:')), []);
+  assert.ok(Object.keys(world.props).some((k) => k.startsWith('closures:')));
+
+  world.fn.sync();
+  assert.equal(classes(world).length, 7, 'rebuilt by the next sync');
+});
+
+test('resetSource names the sources when given a wrong one', () => {
+  const world = newWorld();
+  assert.throws(() => world.fn.resetSource('nope'), /No source named "nope"; the sources are kiln, discard, closures, classes/);
+});
