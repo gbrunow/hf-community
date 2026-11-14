@@ -19,12 +19,14 @@ const CONFIG = {
     {
       enabled: true,
       header: 'Downtown',
+      discardTab: /discard.*\bDT\b/i,
       calendarName: 'Higher Fire · Downtown',
       location: '499 S Market St, San Jose, CA 95113',
     },
     {
       enabled: true,
       header: 'JTown',
+      discardTab: /discard.*\bJT\b/i,
       calendarName: 'Higher Fire · JTown',
       location: '520 N 7th St, San Jose, CA 95112',
     },

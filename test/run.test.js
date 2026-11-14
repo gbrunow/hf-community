@@ -32,7 +32,7 @@ test('first sync creates every event in one Gemini request', () => {
   ]);
   assert.equal(world.events(JT).length, 5);
   assert.equal(world.state().length, 9);
-  assert.match(world.summary(), /9 cells, 0 unchanged, 9 new \(12 events added\)/);
+  assert.match(world.summary(), /9 items, 0 unchanged, 9 new \(12 events added\)/);
 });
 
 test('events carry their stage color, location and timing', () => {
@@ -89,7 +89,7 @@ test('a second sync with nothing changed makes no requests and no writes', () =>
 
   assert.equal(world.requests.length, 1);
   assert.deepEqual(world.allEvents().map((e) => e.id), before);
-  assert.match(world.summary(), /9 cells, 9 unchanged, 0 new/);
+  assert.match(world.summary(), /9 items, 9 unchanged, 0 new/);
 });
 
 test("an edited note replaces only that note's events", () => {
@@ -157,7 +157,7 @@ test('preview writes nothing', () => {
   assert.deepEqual(Object.keys(world.calendars), []);
   assert.equal(world.state().length, 0);
   assert.equal(world.requests.length, 1);
-  assert.match(world.summary(), /^Preview of 2026-09-25 to 2026-10-23: 9 cells, 0 unchanged, 9 new \(12 events to add\)/);
+  assert.match(world.summary(), /^Preview of 2026-09-25 to 2026-10-23: 9 items, 0 unchanged, 9 new \(12 events to add\)/);
 });
 
 test('preview uses GEMINI_PREVIEW_MODEL and sync keeps GEMINI_MODEL', () => {
@@ -299,7 +299,7 @@ test('the trigger follows SYNC_INTERVAL_MINUTES', () => {
 test('SYNC_MAX_DAYS_AHEAD moves the end of the window and is validated', () => {
   const world = newWorld({ props: { SYNC_MAX_DAYS_AHEAD: '30' } });
   world.fn.preview();
-  assert.match(world.summary(), /to 2026-11-08: 10 cells/);
+  assert.match(world.summary(), /to 2026-11-08: 10 items/);
 
   world.props.SYNC_MAX_DAYS_AHEAD = 'two weeks';
   assert.throws(() => world.fn.preview(), /whole number from 0 to 366/);

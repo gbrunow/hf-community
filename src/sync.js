@@ -72,7 +72,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
 
   console.log(
     `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
-      `${counts.cells} cells, ${counts.unchanged} unchanged, ${counts.added} new ` +
+      `${counts.cells} items, ${counts.unchanged} unchanged, ${counts.added} new ` +
       `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
       `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed` +
       (counts.deferred
@@ -226,9 +226,19 @@ function loadState_(props, prefix) {
  * @returns {string}
  */
 function cellKey_(cell) {
+  return hashKey_([cell.studio.header, isoDate_(cell.date), cell.text]);
+}
+
+/**
+ * A short key that changes whenever any of the parts do.
+ *
+ * @param {string[]} parts
+ * @returns {string}
+ */
+function hashKey_(parts) {
   const digest = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
-    [cell.studio.header, isoDate_(cell.date), cell.text].join('\u0000'),
+    parts.join('\u0000'),
     Utilities.Charset.UTF_8,
   );
   return Utilities.base64EncodeWebSafe(digest).slice(0, 22);

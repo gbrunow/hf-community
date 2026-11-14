@@ -43,7 +43,7 @@ function readCells_(today, windowStart, windowEnd) {
       continue;
     }
     const rows = sheet.getDataRange().getDisplayValues();
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheet.getId()}/edit`;
+    const sheetUrl = spreadsheetUrl_(spreadsheet);
     const gid = sheet.getSheetId();
     for (const cell of cellsFromRows_(rows, year, windowStart, windowEnd)) {
       const rowUrl = `${sheetUrl}?gid=${gid}#gid=${gid}&range=${cell.rowRange}`;
@@ -51,6 +51,14 @@ function readCells_(today, windowStart, windowEnd) {
     }
   }
   return cells;
+}
+
+/**
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet
+ * @returns {string}
+ */
+function spreadsheetUrl_(spreadsheet) {
+  return `https://docs.google.com/spreadsheets/d/${spreadsheet.getId()}/edit`;
 }
 
 /**

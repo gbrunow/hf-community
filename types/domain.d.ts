@@ -4,6 +4,8 @@ interface Studio {
   enabled: boolean;
   /** The column header in the kiln tab. */
   header: string;
+  /** Matches the name of the tab holding this studio's discard schedule. */
+  discardTab: RegExp;
   calendarName: string;
   location: string;
 }

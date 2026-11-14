@@ -79,7 +79,7 @@ test("each source keeps its own state, and the kiln source keeps the cell: prefi
 
   assert.equal(world.state().length, 9);
   assert.ok(Object.keys(world.props).includes('fake:key-first'));
-  assert.match(world.summary(), /10 cells, 0 unchanged, 10 new/);
+  assert.match(world.summary(), /10 items, 0 unchanged, 10 new/);
 });
 
 test('reset clears every source', () => {
