@@ -286,8 +286,8 @@ function findDuplicateEvents() {
 
 /**
  * Lists events on the studios' calendars that no stored item owns: leftovers from a run
- * that failed midway, or copies from two overlapping runs. Read-only; the range is two
- * months back through the longest look-ahead.
+ * that failed midway, or copies from two overlapping runs. Read-only; it covers the sync
+ * window (older events are deliberately left on the calendar and forgotten).
  *
  * @returns {string[]} one line per untracked event, or a single line saying there are none
  */
@@ -313,10 +313,11 @@ function findUntrackedEvents() {
       lines.push(`${name}: no calendar by this name`);
       continue;
     }
-    for (const event of calendar.getEvents(addDays_(today, -60), addDays_(today, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1))) {
+    const from = addDays_(today, -CONFIG.WINDOW_PAST_DAYS);
+    for (const event of calendar.getEvents(from, addDays_(today, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1))) {
       checked++;
       if (!tracked.has(event.getId())) {
-        lines.push(`${name}: ${isoDate_(event.getStartTime())} ${event.getTitle()}`);
+        lines.push(`${name}: ${isoDate_(new Date(event.getStartTime().getTime()))} ${event.getTitle()}`);
       }
     }
   }
