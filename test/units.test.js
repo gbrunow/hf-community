@@ -91,11 +91,13 @@ test('validateParsed_ drops malformed or implausibly distant timed items', () =>
   const cell = { date: date(2026, 10, 9), text: 'raw note' };
   const parsed = fn.validateParsed_(
     {
-      activities: ['  Bisque loading ', ''],
-      timed: [
+      events: [
+        { title: '  Bisque loading ', date: '2026-10-09' },
+        { title: '', date: '2026-10-09' },
         { title: 'Unload', date: '2026-10-10', time: '11:00' },
         { title: 'Bad time', date: '2026-10-10', time: '25:00' },
         { title: 'Bad date', date: 'Oct 10', time: '11:00' },
+        { title: 'No date', time: '11:00' },
         { title: 'Too far', date: '2027-10-10', time: '11:00' },
       ],
     },
@@ -109,7 +111,7 @@ test('validateParsed_ drops malformed or implausibly distant timed items', () =>
 
 test('validateParsed_ falls back to the raw note when nothing usable is left', () => {
   const cell = { date: date(2026, 10, 9), text: 'raw note' };
-  for (const reply of [{}, { activities: ['  '], timed: [] }]) {
+  for (const reply of [{}, { events: [] }, { events: [{ title: '  ', date: '2026-10-09' }] }]) {
     assert.deepEqual([...fn.validateParsed_(reply, cell).activities], ['raw note']);
   }
 });

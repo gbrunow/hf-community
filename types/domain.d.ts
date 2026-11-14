@@ -46,10 +46,16 @@ interface Parsed {
   timed: TimedItem[];
 }
 
+/** One thing Gemini found in a note, before validation; an event with a time is timed. */
+interface RawEvent {
+  title?: unknown;
+  date?: string;
+  time?: string;
+}
+
 /** What Gemini returns for one note, before validation. */
 interface RawParsed {
-  activities?: unknown[];
-  timed?: TimedItem[];
+  events?: RawEvent[];
 }
 
 /** What the script remembers about a synced cell. */

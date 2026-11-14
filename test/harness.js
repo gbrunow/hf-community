@@ -190,7 +190,11 @@ function fakeParse(note) {
     .split(/[,.]/)
     .map((part) => part.trim())
     .filter(Boolean);
-  return { id: note.id, activities, timed };
+  const events = [
+    ...activities.map((title) => ({ title, date: note.date })),
+    ...timed,
+  ];
+  return { id: note.id, events };
 }
 
 function gemini(world, url, request) {
