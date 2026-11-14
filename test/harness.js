@@ -193,7 +193,11 @@ function calendarApp(world) {
       createEvent: (title, start, end, options) =>
         addEvent(events, { title, start, end, allDay: false, ...options }),
       getEventById: (id) => (events[id] ? handle(events, events[id]) : null),
-      getEvents: () => Object.values(events).map((record) => handle(events, record)),
+      // Like the real one: only events that overlap the range.
+      getEvents: (from, to) =>
+        Object.values(events)
+          .filter((record) => (record.end || record.date) >= from && (record.start || record.date) < to)
+          .map((record) => handle(events, record)),
     };
     world.calendars[name] = calendar;
     return calendar;
@@ -218,6 +222,11 @@ function handle(events, record) {
     getId: () => record.id,
     getTitle: () => record.title,
     getDescription: () => record.description || '',
+    setDescription: (text) => {
+      record.description = text;
+      record.descriptionWrites = (record.descriptionWrites || 0) + 1;
+    },
+    getGuestList: () => record.guests || [],
     getStartTime: () => record.start || record.date,
     getEndTime: () => record.end || record.date,
     isAllDayEvent: () => record.allDay,

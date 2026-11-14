@@ -301,6 +301,6 @@ function findUntrackedEvents() {
   for (const { calendarName, event } of scan.untracked) {
     lines.push(`${calendarName}: ${isoDate_(new Date(event.getStartTime().getTime()))} ${event.getTitle()}`);
   }
-  const manual = scan.manual ? `, ${scan.manual} made by hand and left alone` : '';
+  const manual = scan.manual.length ? `, ${scan.manual.length} made by hand and left alone` : '';
   return lines.length ? lines : [`Every one of ${scan.tracked} events the script made is tracked${manual}.`];
 }

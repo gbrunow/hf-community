@@ -198,3 +198,10 @@ interface DayEvent {
 interface EventsResult {
   events: DayEvent[];
 }
+
+/** An event found on one of the studios' calendars. */
+interface ScannedEvent {
+  calendarName: string;
+  calendar: StudioCalendar;
+  event: CalendarEventHandle;
+}

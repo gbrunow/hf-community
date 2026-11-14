@@ -2,7 +2,7 @@
  * @typedef {Object} SyncContext
  * @property {ScriptProperties} props
  * @property {boolean} dryRun
- * @property {{ cells: number, unchanged: number, added: number, events: number, removed: number, failed: number, deferred: number }} counts
+ * @property {{ cells: number, unchanged: number, added: number, events: number, removed: number, failed: number, deferred: number, annotated: number }} counts
  * @property {() => boolean} outOfTime
  * @property {string} model
  * @property {boolean} modelUsed whether a source that calls Gemini had anything to parse
@@ -29,6 +29,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
     removed: 0,
     failed: 0,
     deferred: 0,
+    annotated: 0,
   };
   /** @type {SyncContext} */
   const context = {
@@ -79,12 +80,16 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
   for (const run of runs) {
     removeVanished_(run, context);
   }
+  counts.annotated = annotateManualEvents_({ dryRun, outOfTime });
 
   console.log(
     `${dryRun ? 'Preview' : 'Sync'} of ${isoDate_(windowStart)} to ${isoDate_(windowEnd)}: ` +
       `${counts.cells} items, ${counts.unchanged} unchanged, ${counts.added} new ` +
       `(${counts.events} events ${dryRun ? 'to add' : 'added'}), ` +
       `${counts.removed} events ${dryRun ? 'to remove' : 'removed'}, ${counts.failed} failed` +
+      (counts.annotated
+        ? `, ${counts.annotated} hand-made event(s) ${dryRun ? 'to get' : 'given'} the disclaimers`
+        : '') +
       (counts.deferred
         ? `, ${counts.deferred} left for the next run (out of time).`
         : '.') +

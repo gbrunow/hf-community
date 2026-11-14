@@ -85,14 +85,18 @@ const RULE = '─'.repeat(19);
  * @returns {string}
  */
 function eventDescription_(calendar, source, check) {
-  return [
-    source,
-    RULE,
-    shareSection_(calendar),
-    RULE,
-    CONFIG.DISCLAIMER,
-    `${CONFIG.AI_NOTICE} ${check}`,
-  ].join('\n\n');
+  return [source, disclaimers_(calendar), `${CONFIG.AI_NOTICE} ${check}`].join('\n\n');
+}
+
+/**
+ * What every event on these calendars says about where it comes from, apart from the AI
+ * notice: the contact, the share link and the unofficial-calendar disclaimer.
+ *
+ * @param {StudioCalendar} calendar
+ * @returns {string}
+ */
+function disclaimers_(calendar) {
+  return [RULE, shareSection_(calendar), RULE, CONFIG.DISCLAIMER].join('\n\n');
 }
 
 /**
@@ -140,24 +144,26 @@ function getCalendar_(name, sheetUrl) {
 }
 
 /**
- * Whether the script made this event. Every event it makes carries the disclaimer line in its
- * description and one made by hand doesn't, so only the script's are ever candidates for
- * cleanup or reporting. A text match errs toward leaving an event alone: if the wording
- * changes, older events stop matching rather than a hand-made one starting to.
+ * Whether the script made this event: its description carries the AI notice, which only the
+ * script's events say (hand-made ones get the other disclaimers, never that one). Cleanup
+ * and reporting use this on top of the stored event IDs, which are the real record of what
+ * the script owns. A text match errs toward leaving an event alone: if the wording changes,
+ * older events stop matching rather than a hand-made one starting to.
  *
  * @param {CalendarEventHandle} event
  * @returns {boolean}
  */
 function isScriptEvent_(event) {
-  return event.getDescription().includes(CONFIG.DISCLAIMER);
+  const description = event.getDescription();
+  return description.includes(CONFIG.DISCLAIMER) && description.includes(CONFIG.AI_NOTICE);
 }
 
 /**
  * Sorts the events on the studios' calendars, across the sync window, into those the script
  * made and some stored item owns, those it made that none owns (leftovers of a failed run, or
- * copies from overlapping ones), and those made by hand, which are only counted.
+ * copies from overlapping ones), and those made by hand.
  *
- * @returns {{ untracked: { calendarName: string, event: CalendarEventHandle }[], tracked: number, manual: number, missing: string[] }}
+ * @returns {{ untracked: ScannedEvent[], tracked: number, manual: ScannedEvent[], missing: string[] }}
  */
 function scanCalendars_() {
   const props = PropertiesService.getScriptProperties();
@@ -174,8 +180,8 @@ function scanCalendars_() {
   const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
     s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
   );
-  /** @type {{ untracked: { calendarName: string, event: CalendarEventHandle }[], tracked: number, manual: number, missing: string[] }} */
-  const scan = { untracked: [], tracked: 0, manual: 0, missing: [] };
+  /** @type {{ untracked: ScannedEvent[], tracked: number, manual: ScannedEvent[], missing: string[] }} */
+  const scan = { untracked: [], tracked: 0, manual: [], missing: [] };
   for (const name of names) {
     const calendar = CalendarApp.getCalendarsByName(name)[0];
     if (!calendar) {
@@ -183,10 +189,38 @@ function scanCalendars_() {
       continue;
     }
     for (const event of calendar.getEvents(from, to)) {
-      if (!isScriptEvent_(event)) scan.manual++;
-      else if (owned.has(event.getId())) scan.tracked++;
-      else scan.untracked.push({ calendarName: name, event });
+      if (owned.has(event.getId())) scan.tracked++;
+      else if (isScriptEvent_(event)) scan.untracked.push({ calendarName: name, calendar, event });
+      else scan.manual.push({ calendarName: name, calendar, event });
     }
   }
   return scan;
+}
+
+/**
+ * Adds the disclaimers (not the AI notice) below the text of the hand-made events in the sync
+ * window that don't have them yet, so anyone seeing a hand-made event on these calendars
+ * knows they are unofficial too. Events with guests are skipped, as editing them might
+ * notify the guests. Returns how many it changed (or would change, for a dry run).
+ *
+ * @param {{ dryRun: boolean, outOfTime: () => boolean }} options
+ * @returns {number}
+ */
+function annotateManualEvents_({ dryRun, outOfTime }) {
+  let changed = 0;
+  for (const { calendar, event } of scanCalendars_().manual) {
+    if (outOfTime()) break;
+    const text = event.getDescription();
+    if (text.includes(CONFIG.DISCLAIMER) || event.getGuestList().length) continue;
+    changed++;
+    console.log(
+      `${dryRun ? 'Would add' : 'Adding'} the disclaimers to the hand-made event "${event.getTitle()}".`,
+    );
+    if (dryRun) continue;
+    const footer = text
+      ? [text, disclaimers_(calendar)]
+      : [shareSection_(calendar), RULE, CONFIG.DISCLAIMER];
+    event.setDescription(footer.join('\n\n'));
+  }
+  return changed;
 }

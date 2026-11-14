@@ -41,7 +41,7 @@ function worldWithManualEvents(options = {}) {
   return world;
 }
 
-test('a sync, and a second one, leave hand-made events alone', () => {
+test('a sync, and a second one, keep hand-made events', () => {
   const world = worldWithManualEvents();
   world.fn.sync();
   world.fn.sync();
@@ -161,6 +161,105 @@ test('every event any source makes carries the marker the cleanup relies on', ()
 
   const events = world.allEvents();
   assert.ok(events.length > 20);
-  const unmarked = events.filter((e) => !e.description.includes(world.eval('CONFIG.DISCLAIMER')));
-  assert.deepEqual(unmarked.map((e) => e.title), []);
+  const marked = (e) =>
+    e.description.includes(world.eval('CONFIG.DISCLAIMER')) &&
+    e.description.includes(world.eval('CONFIG.AI_NOTICE'));
+  assert.deepEqual(events.filter((e) => !marked(e)).map((e) => e.title), []);
+});
+
+const manualEvent = (world, title) => world.allEvents().find((e) => e.title === title);
+const configured = (world, name) => world.eval(`CONFIG.${name}`);
+
+test('hand-made events in the sync window get the disclaimers below their own text', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+
+  const { DISCLAIMER, CONTACT, AI_NOTICE } = Object.fromEntries(
+    ['DISCLAIMER', 'CONTACT', 'AI_NOTICE'].map((name) => [name, configured(world, name)]),
+  );
+  const dentist = manualEvent(world, 'Dentist (mine)').description;
+  assert.ok(dentist.startsWith('my own note\n\n─'), 'their text stays first');
+  assert.ok(dentist.includes(CONTACT));
+  assert.ok(dentist.includes('Share this calendar:\nwebcal://'));
+  assert.ok(dentist.endsWith(DISCLAIMER));
+  assert.ok(!dentist.includes(AI_NOTICE), 'a hand-made event is not AI-generated');
+});
+
+test('a hand-made event with no text starts with the contact line, not a rule', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+
+  const bowls = manualEvent(world, 'Pick up my bowls').description;
+  assert.ok(bowls.startsWith(configured(world, 'CONTACT')));
+  assert.ok(bowls.endsWith(configured(world, 'DISCLAIMER')));
+});
+
+test('hand-made events outside the sync window are left exactly as they are', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+  assert.equal(manualEvent(world, 'Old reminder').description, 'from the summer');
+});
+
+test('the disclaimers are added once, however many times it runs', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+  assert.match(world.summary(), /, 4 hand-made event\(s\) given the disclaimers\./);
+  const writes = () => world.allEvents().map((e) => e.descriptionWrites || 0).reduce((a, b) => a + b, 0);
+  const afterFirst = writes();
+
+  world.fn.sync();
+  world.fn.sync();
+
+  assert.equal(writes(), afterFirst, 'no further writes');
+  assert.doesNotMatch(world.summary(), /hand-made/);
+});
+
+test('an event with guests is skipped, since editing it might email them', () => {
+  const world = worldWithManualEvents();
+  world.allEvents().find((e) => e.title === 'Dentist (mine)').guests = ['dr@example.test'];
+
+  world.fn.sync();
+
+  assert.equal(manualEvent(world, 'Dentist (mine)').description, 'my own note');
+  assert.ok(manualEvent(world, 'Pick up my bowls').description.includes(configured(world, 'DISCLAIMER')));
+});
+
+test('the script\'s own events are never taken for hand-made ones, whatever their text says', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+  const own = world.events(CLASSES).find((e) => !world.manual.includes(e.id));
+  own.description = 'edited by someone, markers gone';
+
+  world.fn.sync();
+
+  assert.equal(own.description, 'edited by someone, markers gone', 'tracked by id, so not annotated');
+});
+
+test('a preview says what it would add and writes nothing', () => {
+  const world = worldWithManualEvents();
+  world.fn.preview();
+
+  assert.equal(manualEvent(world, 'Dentist (mine)').description, 'my own note');
+  assert.match(world.summary(), /, 4 hand-made event\(s\) to get the disclaimers\./);
+  assert.ok(world.logs.some((l) => /Would add the disclaimers to the hand-made event "Dentist \(mine\)"/.test(l.text)));
+});
+
+test('an annotated hand-made event is still hand-made: cleanup leaves it and the checks count it', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+
+  world.fn.removeUntrackedEvents();
+
+  world.expectManualIntact();
+  assert.match(Array.from(world.fn.findUntrackedEvents())[0], /4 made by hand and left alone\.$/);
+});
+
+test('the footer a hand-made event gets is the script events\' footer without the AI notice', () => {
+  const world = worldWithManualEvents();
+  world.fn.sync();
+
+  // Same calendar, since the share link names the calendar.
+  const own = world.events(DT).find((e) => !world.manual.includes(e.id)).description;
+  const footer = manualEvent(world, 'Dentist (mine)').description.split('\n\n').slice(1).join('\n\n');
+  assert.ok(own.includes(footer), 'the same rule, contact, share link and disclaimer');
 });
