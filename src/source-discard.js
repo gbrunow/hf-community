@@ -64,6 +64,7 @@ function discardSource_() {
   return {
     name: 'discard',
     statePrefix: DISCARD_STATE_PREFIX,
+    usesModel: true,
     read: readDiscardTabs_,
     parse: (tabs, model) => tabs.map((tab) => parseDiscardTab_(tab, model)),
     createEvents: createDiscardEvents_,

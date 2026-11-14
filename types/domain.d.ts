@@ -101,6 +101,11 @@ interface Source<T, R> {
   name: string;
   /** Prefix of this source's entries in the script properties. */
   statePrefix: string;
+  /** Days ahead this source covers; the global SYNC_MAX_DAYS_AHEAD when absent. */
+  lookaheadDays?: number;
+  /** Whether parse calls Gemini, so the run summary names the model. */
+  usesModel?: boolean;
+  /** Reads the items inside the window, which already reflects lookaheadDays. */
   read(window: SyncWindow): Item<T>[];
   /** One result per payload, in order; undefined for a payload that could not be parsed. */
   parse(payloads: T[], model: string): (R | undefined)[];

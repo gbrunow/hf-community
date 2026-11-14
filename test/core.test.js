@@ -145,3 +145,73 @@ test('a source that cannot be read fails the run before anything is written', ()
   assert.throws(() => world.fn.sync(), /tab missing/);
   assert.equal(world.allEvents().length, before, 'the kiln edit was not applied either');
 });
+
+/** A source of dated items that records the window it was asked to read. */
+function datedSource(world, { items, lookaheadDays, windows }) {
+  return {
+    name: 'dated',
+    statePrefix: 'dated:',
+    lookaheadDays,
+    read: (window) => {
+      windows.push(window);
+      return items.map(({ text, days }) => ({
+        key: `key-${text}`,
+        date: new Date(window.today.getFullYear(), window.today.getMonth(), window.today.getDate() + days),
+        calendarName: FAKE,
+        sheetUrl: 'https://example.test/sheet',
+        label: `dated "${text}"`,
+        payload: text,
+      }));
+    },
+    parse: (payloads) => payloads.map((text) => ({ text })),
+    createEvents: (calendar, text) => [
+      calendar.createAllDayEvent(text, new Date(2026, 11, 1), {}).getId(),
+    ],
+    describe: (result) => result.text,
+    countEvents: () => 1,
+  };
+}
+
+test("a source's own look-ahead sets its window and how far removal reaches", () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const windows = [];
+  const dated = { items: [{ text: 'far', days: 100 }], lookaheadDays: 180, windows };
+  world.context.sources_ = () => [datedSource(world, dated)];
+
+  world.fn.sync();
+  assert.equal(world.fn.isoDate_(windows[0].windowEnd), '2027-04-07', '180 days from Oct 9');
+  assert.deepEqual(fakeTitles(world), ['far']);
+
+  // 100 days out is far beyond the global 14-day window, yet an edit must still replace it.
+  dated.items = [{ text: 'edited', days: 100 }];
+  world.fn.sync();
+  assert.deepEqual(fakeTitles(world), ['edited']);
+
+  dated.items = [];
+  world.fn.sync();
+  assert.deepEqual(fakeTitles(world), []);
+});
+
+test('a source without its own look-ahead gets the global window', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const windows = [];
+  world.context.sources_ = () => [datedSource(world, { items: [], windows })];
+
+  world.fn.sync();
+
+  assert.equal(world.fn.isoDate_(windows[0].windowEnd), '2026-10-23');
+});
+
+test('the summary names the model only when a source that calls Gemini had work', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  world.fn.sync();
+  assert.match(world.summary(), /Model: gemini-flash-lite-latest\.$/);
+
+  world.fn.sync();
+  assert.doesNotMatch(world.summary(), /Model:/, 'nothing new to parse');
+
+  const plain = createWorld({ tabs: { [TAB]: kilnRows() } });
+  plain.context.sources_ = () => [datedSource(plain, { items: [{ text: 'x', days: 0 }], windows: [] })];
+  plain.fn.sync();
+  assert.doesNotMatch(plain.summary(), /Model:/, 'a source that never calls Gemini');
+});

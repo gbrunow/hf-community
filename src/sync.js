@@ -5,6 +5,7 @@
  * @property {{ cells: number, unchanged: number, added: number, events: number, removed: number, failed: number, deferred: number }} counts
  * @property {() => boolean} outOfTime
  * @property {string} model
+ * @property {boolean} modelUsed whether a source that calls Gemini had anything to parse
  */
 
 /**
@@ -36,17 +37,26 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
     counts,
     outOfTime,
     model: geminiModel_(dryRun),
+    modelUsed: false,
   };
 
   // Every source is read before anything is written, so a source that can't be read
   // (say, a missing tab) fails the run instead of looking like every item was cleared.
   const runs = sources_().map((source) => {
+    const window = {
+      today,
+      windowStart,
+      windowEnd:
+        source.lookaheadDays === undefined
+          ? windowEnd
+          : addDays_(today, source.lookaheadDays),
+    };
     const state = ignoreState ? {} : loadState_(props, source.statePrefix);
     /** @type {Set<string>} */
     const seen = new Set();
     /** @type {Item<any>[]} */
     const fresh = [];
-    for (const item of source.read({ today, windowStart, windowEnd })) {
+    for (const item of source.read(window)) {
       counts.cells++;
       seen.add(item.key);
       if (state[item.key]) {
@@ -55,7 +65,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
         fresh.push(item);
       }
     }
-    return { source, state, seen, fresh };
+    return { source, state, seen, fresh, window };
   });
 
   let timedOut = false;
@@ -67,7 +77,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
     }
   }
   for (const run of runs) {
-    removeVanished_(run, windowStart, windowEnd, context);
+    removeVanished_(run, context);
   }
 
   console.log(
@@ -78,7 +88,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
       (counts.deferred
         ? `, ${counts.deferred} left for the next run (out of time).`
         : '.') +
-      (counts.added || counts.failed ? ` Model: ${context.model}.` : ''),
+      (context.modelUsed ? ` Model: ${context.model}.` : ''),
   );
 }
 
@@ -92,6 +102,7 @@ function run_({ dryRun, pastDays, ignoreState = false }) {
  */
 function createFresh_({ source, fresh }, context) {
   const { props, dryRun, counts, outOfTime, model } = context;
+  if (source.usesModel && fresh.length) context.modelUsed = true;
   const batchSize = Math.ceil(
     fresh.length / Math.ceil(fresh.length / CONFIG.MAX_NOTES_PER_REQUEST),
   );
@@ -160,13 +171,12 @@ function createFresh_({ source, fresh }, context) {
  * (inside the window), or aged out of it (forgotten, their events kept). Items without a
  * date are never in the window or out of it, so they are removed whenever they vanish.
  *
- * @param {{ source: Source<any, any>, state: Record<string, SyncedEntry>, seen: Set<string> }} run
- * @param {Date} windowStart
- * @param {Date} windowEnd
+ * @param {{ source: Source<any, any>, state: Record<string, SyncedEntry>, seen: Set<string>, window: SyncWindow }} run
  * @param {SyncContext} context
  */
-function removeVanished_({ source, state, seen }, windowStart, windowEnd, context) {
+function removeVanished_({ source, state, seen, window }, context) {
   const { props, dryRun, counts } = context;
+  const { windowStart, windowEnd } = window;
   for (const [key, entry] of Object.entries(state)) {
     if (seen.has(key)) continue;
     if (entry.date) {

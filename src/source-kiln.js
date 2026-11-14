@@ -10,6 +10,7 @@ function kilnSource_() {
   return {
     name: 'kiln',
     statePrefix: KILN_STATE_PREFIX,
+    usesModel: true,
     read: ({ today, windowStart, windowEnd }) =>
       readCells_(today, windowStart, windowEnd).map((cell) => ({
         key: cellKey_(cell),
