@@ -89,6 +89,7 @@ const CONFIG = {
     {
       name: 'Firing',
       pattern: /\bfir(e|ed|es|ing)\b/i,
+      emoji: '🔥',
     },
     {
       name: 'Loading',
