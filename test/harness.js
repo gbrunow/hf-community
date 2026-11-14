@@ -87,6 +87,7 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
     vm.runInContext(file.code, world.context, { filename: file.name });
   }
   world.fn = world.context; // Top-level functions become context properties.
+  vm.runInContext('CONFIG.STUDIOS.forEach((studio) => { studio.enabled = true; })', world.context);
   world.eval = (expression) => vm.runInContext(expression, world.context);
 
   world.events = (calendarName) =>
