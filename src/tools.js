@@ -283,3 +283,42 @@ function findDuplicateEvents() {
   }
   return lines.length ? lines : [`No duplicates among ${checked} events.`];
 }
+
+/**
+ * Lists events on the studios' calendars that no stored item owns: leftovers from a run
+ * that failed midway, or copies from two overlapping runs. Read-only; the range is two
+ * months back through the longest look-ahead.
+ *
+ * @returns {string[]} one line per untracked event, or a single line saying there are none
+ */
+function findUntrackedEvents() {
+  const props = PropertiesService.getScriptProperties();
+  /** @type {Set<string>} */
+  const tracked = new Set();
+  for (const source of sources_()) {
+    for (const entry of Object.values(loadState_(props, source.statePrefix))) {
+      for (const id of entry.ids) tracked.add(id);
+    }
+  }
+  const today = startOfDay_(new Date());
+  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
+    s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
+  );
+  /** @type {string[]} */
+  const lines = [];
+  let checked = 0;
+  for (const name of names) {
+    const calendar = CalendarApp.getCalendarsByName(name)[0];
+    if (!calendar) {
+      lines.push(`${name}: no calendar by this name`);
+      continue;
+    }
+    for (const event of calendar.getEvents(addDays_(today, -60), addDays_(today, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1))) {
+      checked++;
+      if (!tracked.has(event.getId())) {
+        lines.push(`${name}: ${isoDate_(event.getStartTime())} ${event.getTitle()}`);
+      }
+    }
+  }
+  return lines.length ? lines : [`Every one of ${checked} events is tracked.`];
+}

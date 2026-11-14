@@ -21,8 +21,8 @@ const CONFIG = {
       header: 'Downtown',
       discardTab: /discard.*\bDT\b/i,
       eventsTab: /^\s*DT\b.*events/i,
-      calendarName: 'Higher Fire · Downtown',
-      classesCalendarName: 'Higher Fire · Downtown Classes',
+      calendarName: 'Higher Fire · Kiln Notes & Events',
+      classesCalendarName: 'Higher Fire · Classes',
       location: '499 S Market St, San Jose, CA 95113',
     },
     {

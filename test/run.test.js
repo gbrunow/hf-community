@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { createWorld } = require('./harness');
 const { TAB, kilnRows } = require('./fixture');
 
-const DT = 'Higher Fire · Downtown';
+const DT = 'Higher Fire · Kiln Notes & Events';
 const JT = 'Higher Fire · JTown';
 const DAY = 24 * 60 * 60 * 1000;
 
