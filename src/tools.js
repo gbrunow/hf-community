@@ -140,3 +140,51 @@ function inspectEventColors() {
     console.log(`${studio.calendarName}:\n${lines.join('\n')}`);
   }
 }
+
+/**
+ * Lists the events on each enabled studio calendar for a day, with the note each came from.
+ * Run it with `npm run fn -- eventsOn -p '["2026-11-15"]'`.
+ *
+ * @param {string} iso YYYY-MM-DD
+ * @returns {string[]}
+ */
+function eventsOn(iso) {
+  const day = parseIsoDate_(iso);
+  const lines = [];
+  for (const studio of CONFIG.STUDIOS.filter((s) => s.enabled)) {
+    const calendar = CalendarApp.getCalendarsByName(studio.calendarName)[0];
+    if (!calendar) continue;
+    lines.push(`${studio.calendarName}:`);
+    for (const event of calendar.getEventsForDay(day)) {
+      const when = event.isAllDayEvent()
+        ? 'all day'
+        : `${event.getStartTime().toTimeString().slice(0, 5)}-${event.getEndTime().toTimeString().slice(0, 5)}`;
+      const note = event.getDescription().split('\n\n').slice(0, 2).join(' ');
+      lines.push(`  ${when.padEnd(11)} ${event.getTitle()}  <- ${note}`);
+    }
+  }
+  return lines;
+}
+
+/**
+ * Parses one made-up note with the real Gemini and returns what would become events,
+ * writing nothing. Run it with `npm run fn -- tryParse -p '["2026-11-15","Bisque unload by 2pm"]'`.
+ *
+ * @param {string} iso YYYY-MM-DD, the day the note is for
+ * @param {string} text
+ * @returns {string}
+ */
+function tryParse(iso, text) {
+  const studio = CONFIG.STUDIOS[0];
+  const cell = /** @type {Cell} */ ({
+    studio,
+    date: parseIsoDate_(iso),
+    dateLabel: iso,
+    text,
+    rowRange: '',
+    sheetUrl: '',
+    rowUrl: '',
+  });
+  const [parsed] = parseNotes_([cell], geminiModel_(true));
+  return parsed ? describeParsed_(parsed) : '(no result)';
+}
