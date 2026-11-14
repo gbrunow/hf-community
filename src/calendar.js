@@ -11,17 +11,10 @@ function createEvents_(calendar, cell, parsed) {
     'Check the original note before relying on an event.',
   );
   const options = { description, location: cell.studio.location };
-  // A stage's optional emoji prefixes the title, carrying the stage to clients that
-  // ignore event colors (Apple Calendar).
-  /** @param {string} title */
-  const titled = (title) => {
-    const stage = stageOf_(title);
-    return { stage, title: stage?.emoji ? `${stage.emoji} ${title}` : title };
-  };
   /** @type {{ stage: Stage | null, event: CalendarEventHandle }[]} */
   const events = [];
   for (const activity of parsed.activities) {
-    const { stage, title } = titled(activity);
+    const { stage, title } = stagedTitle_(activity);
     events.push({
       stage,
       event: calendar.createAllDayEvent(title, cell.date, options),
@@ -30,16 +23,34 @@ function createEvents_(calendar, cell, parsed) {
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    const { stage, title } = titled(item.title);
+    const { stage, title } = stagedTitle_(item.title);
     events.push({
       stage,
       event: calendar.createEvent(title, start, end, options),
     });
   }
-  for (const { stage, event } of events) {
-    if (stage?.colorId) event.setColor(String(stage.colorId));
-  }
+  for (const { stage, event } of events) styleEvent_(event, stage);
   return events.map(({ event }) => event.getId());
+}
+
+/**
+ * A stage's optional emoji prefixes the title, carrying the stage to clients that ignore
+ * event colors (Apple Calendar).
+ *
+ * @param {string} title
+ * @returns {{ stage: Stage | null, title: string }}
+ */
+function stagedTitle_(title) {
+  const stage = stageOf_(title);
+  return { stage, title: stage?.emoji ? `${stage.emoji} ${title}` : title };
+}
+
+/**
+ * @param {CalendarEventHandle} event
+ * @param {Stage | null} stage
+ */
+function styleEvent_(event, stage) {
+  if (stage?.colorId) event.setColor(String(stage.colorId));
 }
 
 /**
