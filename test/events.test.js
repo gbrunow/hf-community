@@ -422,3 +422,70 @@ test('purgeClasses clears the classes calendar, orphans included, and nothing el
   world.fn.sync();
   assert.equal(classes(world).length, 7, 'rebuilt by the next sync');
 });
+
+const RENAMED_MAIN = 'Higher Fire · Kiln Notes & Events';
+const RENAMED_CLASSES = 'Higher Fire · Classes';
+
+test('renameCalendar renames the real calendar and the names stored for its events', () => {
+  const world = newWorld();
+  world.fn.sync();
+  const before = world.events(DT).length;
+
+  world.fn.renameCalendar(DT, RENAMED_MAIN);
+
+  assert.equal(world.calendars[DT], undefined);
+  assert.equal(world.events(RENAMED_MAIN).length, before, 'the events came with it');
+  assert.deepEqual(
+    Object.entries(world.props)
+      .filter(([k]) => /^(cell|discard|closures):/.test(k))
+      .map(([, v]) => JSON.parse(v).calendarName)
+      .filter((name) => name === DT),
+    [],
+    'no stored item still names the old calendar',
+  );
+  assert.ok(Object.entries(world.props).some(([k, v]) => k.startsWith('cell:') && JSON.parse(v).calendarName === RENAMED_MAIN));
+});
+
+test('after a rename and the new config, a sync recreates nothing and a reset still finds the events', () => {
+  const world = newWorld();
+  world.fn.sync();
+  world.fn.renameCalendar(DT, RENAMED_MAIN);
+  world.fn.renameCalendar(CLASSES, RENAMED_CLASSES);
+  world.eval(`CONFIG.STUDIOS[0].calendarName = ${JSON.stringify(RENAMED_MAIN)}; CONFIG.STUDIOS[0].classesCalendarName = ${JSON.stringify(RENAMED_CLASSES)};`);
+  const eventCount = world.allEvents().length;
+  const requests = world.requests.length;
+
+  world.fn.sync();
+
+  assert.equal(world.allEvents().length, eventCount);
+  assert.equal(world.requests.length, requests, 'nothing was parsed again');
+  assert.equal(world.calendars[DT], undefined, 'no calendar under the old main name');
+  assert.equal(world.calendars[CLASSES], undefined, 'no calendar under the old classes name');
+
+  world.fn.reset();
+  assert.equal(world.allEvents().length, 0);
+});
+
+test('renameCalendar can be run again after a failure, and refuses to merge calendars', () => {
+  const world = newWorld();
+  world.fn.sync();
+  world.fn.renameCalendar(DT, RENAMED_MAIN);
+
+  world.fn.renameCalendar(DT, RENAMED_MAIN); // already renamed: just rewrites stored names
+
+  assert.throws(() => world.fn.renameCalendar('No such calendar', 'Another'), /No calendar named/);
+  world.calendars[DT] = { name: DT, events: {}, getName: () => DT };
+  assert.throws(() => world.fn.renameCalendar(DT, RENAMED_MAIN), /Both .* exist/);
+});
+
+test('pauseTrigger stops the schedule and installTrigger resumes it', () => {
+  const world = newWorld();
+  world.fn.installTrigger();
+  assert.equal(world.triggers.length, 1);
+
+  world.fn.pauseTrigger();
+  assert.equal(world.triggers.length, 0);
+
+  world.fn.installTrigger();
+  assert.equal(world.triggers.length, 1);
+});

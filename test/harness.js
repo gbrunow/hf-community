@@ -156,7 +156,12 @@ function calendarApp(world) {
       events,
       description: '',
       getId: () => `${name.replace(/\W+/g, '')}@group.calendar.google.com`,
-      getName: () => name,
+      getName: () => calendar.name,
+      setName: (newName) => {
+        delete world.calendars[calendar.name];
+        calendar.name = newName;
+        world.calendars[newName] = calendar;
+      },
       getDescription: () => calendar.description,
       setDescription: (text) => {
         calendar.description = text;

@@ -67,10 +67,7 @@ function forceSync() {
 
 function installTrigger() {
   const minutes = syncIntervalMinutes_();
-  for (const trigger of ScriptApp.getProjectTriggers()) {
-    if (trigger.getHandlerFunction() === 'sync')
-      ScriptApp.deleteTrigger(trigger);
-  }
+  deleteSyncTriggers_();
   const builder = ScriptApp.newTrigger('sync').timeBased();
   (minutes < 60
     ? builder.everyMinutes(minutes)
@@ -81,6 +78,56 @@ function installTrigger() {
     String(minutes),
   );
   console.log(`Installed the sync trigger: every ${minutes} minutes.`);
+}
+
+/**
+ * Stops the scheduled sync until installTrigger() runs again, for changes that must not
+ * overlap a run, such as renaming a calendar.
+ */
+function pauseTrigger() {
+  deleteSyncTriggers_();
+  console.log('Paused the sync trigger. Run installTrigger() to resume it.');
+}
+
+function deleteSyncTriggers_() {
+  for (const trigger of ScriptApp.getProjectTriggers()) {
+    if (trigger.getHandlerFunction() === 'sync') ScriptApp.deleteTrigger(trigger);
+  }
+}
+
+/**
+ * Renames a calendar and the names the script has stored for it, so its events stay its
+ * own: the script finds calendars by name. Pause the schedule first (pauseTrigger), and
+ * deploy the new name in config.js before resuming it. Safe to run again after a failure.
+ * Run it with `npm run fn -- renameCalendar -p '["Old name","New name"]'`.
+ *
+ * @param {string} oldName
+ * @param {string} newName
+ */
+function renameCalendar(oldName, newName) {
+  withLock_('renameCalendar', () => {
+    const old = CalendarApp.getCalendarsByName(oldName)[0];
+    const renamed = CalendarApp.getCalendarsByName(newName)[0];
+    if (old && renamed) {
+      throw new Error(`Both "${oldName}" and "${newName}" exist; can't rename onto another calendar.`);
+    }
+    if (!old && !renamed) throw new Error(`No calendar named "${oldName}" or "${newName}".`);
+    if (old) old.setName(newName);
+
+    const props = PropertiesService.getScriptProperties();
+    let entries = 0;
+    for (const source of sources_()) {
+      for (const [key, entry] of Object.entries(loadState_(props, source.statePrefix))) {
+        if (entry.calendarName !== oldName) continue;
+        props.setProperty(
+          source.statePrefix + key,
+          JSON.stringify({ ...entry, calendarName: newName }),
+        );
+        entries++;
+      }
+    }
+    console.log(`Renamed "${oldName}" to "${newName}" and updated ${entries} stored item(s).`);
+  });
 }
 
 /** Reinstalls the trigger when SYNC_INTERVAL_MINUTES no longer matches it. */
