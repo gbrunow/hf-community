@@ -20,7 +20,9 @@ const CONFIG = {
       enabled: true,
       header: 'Downtown',
       discardTab: /discard.*\bDT\b/i,
+      eventsTab: /^\s*DT\b.*events/i,
       calendarName: 'Higher Fire · Downtown',
+      classesCalendarName: 'Higher Fire · Downtown Classes',
       location: '499 S Market St, San Jose, CA 95113',
     },
     {
@@ -49,6 +51,9 @@ const CONFIG = {
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
+  // Closures and workshops are planned months out; class sessions change more, so fewer.
+  EVENTS_LOOKAHEAD_DAYS: 180,
+  CLASSES_LOOKAHEAD_DAYS: 60,
   // Calendar label per kiln stage, from the first pattern matching the event title. The
   // API can't set a label directly: each label owns one of the 11 legacy color IDs, and
   // setting that ID applies it. An ID with no label on a calendar is dropped, so every

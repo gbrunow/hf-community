@@ -6,6 +6,10 @@ interface Studio {
   header: string;
   /** Matches the name of the tab holding this studio's discard schedule. */
   discardTab: RegExp;
+  /** Matches the name of the events tab (the year is matched separately); absent when the studio has none. */
+  eventsTab?: RegExp;
+  /** The calendar for this studio's class sessions; absent when it has none. */
+  classesCalendarName?: string;
   calendarName: string;
   location: string;
 }
@@ -142,4 +146,52 @@ interface RawDiscard {
 interface DiscardResult {
   /** All-day events, soonest first; date is YYYY-MM-DD. */
   events: { date: string; title: string }[];
+}
+
+/** One row of a studio's events tab, or one side-table entry, before Gemini reads it. */
+interface EventsRecord {
+  /** A class session (the row has an event name), an announcement (it doesn't), or a side-table entry. */
+  kind: 'schedule' | 'announcement' | 'side';
+  date: Date;
+  /** The date as the sheet shows it, e.g. "Wed, Jan 7". */
+  dateLabel: string;
+  rowNumber: number;
+  /** The row's non-empty cells keyed by the column headers (or "Side table"). */
+  fields: Record<string, string>;
+  /** Opens the sheet with this row selected. */
+  url: string;
+}
+
+/** What a source of events-tab rows sends to Gemini and later turns into events: one day's records. */
+interface EventsPayload {
+  studio: Studio;
+  /** Where the events go. */
+  kind: 'classes' | 'closures';
+  /** YYYY-MM-DD */
+  iso: string;
+  dateLabel: string;
+  records: EventsRecord[];
+}
+
+/** What Gemini returns for one event of an events-tab day, before validation. */
+interface RawDayEvent {
+  title?: unknown;
+  start?: string;
+  end?: string;
+  wheels?: string;
+  handBuilding?: string;
+}
+
+interface DayEvent {
+  title: string;
+  /** HH:MM, with end; both absent for an all-day event. */
+  start?: string;
+  end?: string;
+  /** The cells as written, verified against the row; empty when the event has none. */
+  wheels: string;
+  handBuilding: string;
+}
+
+interface EventsResult {
+  events: DayEvent[];
 }
