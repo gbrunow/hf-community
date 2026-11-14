@@ -58,14 +58,18 @@ const CONFIG = {
   CLASSES_LOOKAHEAD_DAYS: 60,
   // Gemini starts dropping fields late in a long reply, so days of events go in small batches.
   EVENTS_DAYS_PER_REQUEST: 15,
-  // Calendar label per kiln stage, from the first pattern matching the event title. The
-  // API can't set a label directly: each label owns one of the 11 legacy color IDs, and
-  // setting that ID applies it. An ID with no label on a calendar is dropped, so every
-  // studio calendar needs these labels on these IDs (Settings → the calendar → Event
-  // labels). Label names show only to editors; subscribers see the colors. Apple
-  // Calendar ignores both.
-  /** @type {Stage[]} */
-  STAGES: [
+  // How events look, from the first style whose pattern matches the event's title (so more
+  // specific patterns go first). A style can give a title an emoji, which every calendar
+  // app shows, and a calendar label color. The API can't set a label directly: each label
+  // owns one of the 11 legacy color IDs, and setting that ID applies it. An ID with no
+  // label on a calendar is dropped, so every studio calendar needs these labels on these
+  // IDs (Settings → the calendar → Event labels). Label names show only to editors;
+  // subscribers see the colors. Apple Calendar ignores both. The kiln notes, closures and
+  // discard sources apply styles; classes stay plain.
+  /** @type {EventStyle[]} */
+  EVENT_STYLES: [
+    // First, because "Discard day: Bisque, Glazed Fired Work" would match Firing otherwise.
+    { name: 'Discard', pattern: /^discard day\b/i, emoji: '🗑️' },
     {
       name: 'Closure',
       pattern: /\bclos(ed|es|ing|ure)\b/i,

@@ -60,7 +60,7 @@ function listModels() {
   );
 }
 
-/** Logs the event color IDs the Calendar API accepts, with their hex, for CONFIG.STAGES. */
+/** Logs the event color IDs the Calendar API accepts, with their hex, for CONFIG.EVENT_STYLES. */
 function listEventColors() {
   const response = UrlFetchApp.fetch(
     'https://www.googleapis.com/calendar/v3/colors',

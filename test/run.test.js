@@ -35,7 +35,7 @@ test('first sync creates every event in one Gemini request', () => {
   assert.match(world.summary(), /9 items, 0 unchanged, 9 new \(12 events added\)/);
 });
 
-test('events carry their stage color, location and timing', () => {
+test('events carry their style color, location and timing', () => {
   const world = newWorld();
   world.fn.sync();
 

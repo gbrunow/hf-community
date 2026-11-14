@@ -68,7 +68,7 @@ test('closures go to the main calendar, styled like the kiln closures', () => {
     '2026-12-25 all day 🔴 STUDIO CLOSED FOR CHRISTMAS',
   ]);
   const closure = world.events(DT).find((e) => e.title.includes('FOR THE HOLIDAY'));
-  assert.equal(closure.color, '4', "the Closure stage's color");
+  assert.equal(closure.color, '4', "the Closure style's color");
 });
 
 test('closures and workshops reach 180 days ahead, past the classes window', () => {
@@ -106,8 +106,8 @@ test("a class named like a kiln stage stays plain on the classes calendar", () =
   world.fn.sync();
 
   const event = world.events(CLASSES).find((e) => e.title.includes('Unloading Basics'));
-  assert.equal(event.title, '4 · Unloading Basics', 'no stage emoji');
-  assert.equal(event.color, null, 'no stage color');
+  assert.equal(event.title, '4 · Unloading Basics', 'no style emoji');
+  assert.equal(event.color, null, 'no style color');
 });
 
 test('a class description states the space in words and links its row', () => {

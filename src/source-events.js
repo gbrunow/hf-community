@@ -311,9 +311,9 @@ function createDayEvents_(calendar, payload, result) {
       check,
     );
     const options = { description, location: payload.studio.location };
-    const { stage, title } = closures
-      ? stagedTitle_(eventTitle_(event))
-      : { stage: null, title: eventTitle_(event) };
+    const { style, title } = closures
+      ? styledTitle_(eventTitle_(event))
+      : { style: null, title: eventTitle_(event) };
     const created =
       event.start && event.end
         ? calendar.createEvent(
@@ -323,7 +323,7 @@ function createDayEvents_(calendar, payload, result) {
             options,
           )
         : calendar.createAllDayEvent(title, parseIsoDate_(payload.iso), options);
-    styleEvent_(created, stage);
+    styleEvent_(created, style);
     return created.getId();
   });
 }

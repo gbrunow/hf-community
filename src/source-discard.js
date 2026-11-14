@@ -278,12 +278,13 @@ function createDiscardEvents_(calendar, tab, result) {
     `Original schedule (${tab.tabName}):\n${tab.tabUrl}`,
     'Check the original schedule before relying on an event.',
   );
-  return result.events.map(({ date, title }) =>
-    calendar
-      .createAllDayEvent(title, parseIsoDate_(date), {
-        description,
-        location: tab.studio.location,
-      })
-      .getId(),
-  );
+  return result.events.map(({ date, title }) => {
+    const styled = styledTitle_(title);
+    const event = calendar.createAllDayEvent(styled.title, parseIsoDate_(date), {
+      description,
+      location: tab.studio.location,
+    });
+    styleEvent_(event, styled.style);
+    return event.getId();
+  });
 }

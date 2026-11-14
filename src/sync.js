@@ -264,7 +264,7 @@ function removeVanished_({ source, state, seen, window }, context) {
  */
 function describeParsed_(parsed) {
   /** @param {string} title */
-  const label = (title) => `${title} [${stageOf_(title)?.name || 'no stage'}]`;
+  const label = (title) => `${title} [${styleOf_(title)?.name || 'no style'}]`;
   return [
     ...parsed.activities.map(label),
     ...parsed.timed.map(

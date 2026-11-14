@@ -15,7 +15,7 @@ const isoList = (world, dates) => Array.from(dates, (d) => world.fn.isoDate_(d))
 const discardEvents = (world, calendar) =>
   world
     .events(calendar)
-    .filter((e) => e.title.startsWith('Discard day'))
+    .filter((e) => /Discard day/.test(e.title))
     .map((e) => `${world.fn.isoDate_(e.date)} ${e.title}`)
     .sort();
 const warnings = (world) =>
@@ -113,8 +113,8 @@ test('the first sync creates each studio its discard events, from its own tab', 
   world.fn.sync();
 
   assert.deepEqual(discardEvents(world, DT), [
-    '2026-11-13 Discard day: Bisque, Glazed Fired Work',
-    '2027-01-12 Discard day: Bisque, Glazed Fired Work',
+    '2026-11-13 🗑️ Discard day: Bisque, Glazed Fired Work',
+    '2027-01-12 🗑️ Discard day: Bisque, Glazed Fired Work',
   ]);
   assert.deepEqual(discardEvents(world, JT).map((e) => e.slice(0, 10)), [
     '2026-12-01', '2027-02-01', '2027-04-01', '2027-06-01',
@@ -132,7 +132,7 @@ test('a discard event is plain: all day, studio location, no color, linked to it
   const world = newWorld();
   world.fn.sync();
 
-  const event = world.events(DT).find((e) => e.title.startsWith('Discard day'));
+  const event = world.events(DT).find((e) => /Discard day/.test(e.title));
   assert.equal(event.allDay, true);
   assert.equal(event.color, null);
   assert.equal(event.location, '499 S Market St, San Jose, CA 95113');
@@ -148,7 +148,7 @@ test('a discard event is plain: all day, studio location, no color, linked to it
 test('the tab name is trimmed in the description', () => {
   const world = newWorld();
   world.fn.sync();
-  const event = world.events(JT).find((e) => e.title.startsWith('Discard day'));
+  const event = world.events(JT).find((e) => /Discard day/.test(e.title));
   assert.match(event.description, /^Original schedule \(Pottery Discard Schedule JT\):/);
 });
 
@@ -162,7 +162,7 @@ test('an unchanged schedule is not read again, however long it stays', () => {
   world.fn.sync();
 
   assert.equal(world.requests.filter((r) => r.discard).length, 2);
-  assert.equal(world.events(DT).filter((e) => e.title.startsWith('Discard day')).length, 2);
+  assert.equal(world.events(DT).filter((e) => /Discard day/.test(e.title)).length, 2);
   assert.ok(world.allEvents().length >= before - 12, 'only kiln events may age out');
 });
 
@@ -178,7 +178,7 @@ test("editing a studio's schedule replaces only that studio's discard events", (
   assert.deepEqual(discardEvents(world, JT), jtBefore);
   assert.ok(discardEvents(world, DT).some((e) => e.startsWith('2027-03-15')));
   assert.equal(
-    world.events(DT).filter((e) => e.title.startsWith('Discard day')).length,
+    world.events(DT).filter((e) => /Discard day/.test(e.title)).length,
     3,
     'the old events were removed, not duplicated',
   );
@@ -272,4 +272,26 @@ test('a tab deleted long after it was synced still has its events removed', () =
   world.fn.sync();
 
   assert.deepEqual(discardEvents(world, JT), []);
+});
+
+test('discard days carry the Discard style: a trash can in front of the title', () => {
+  const world = newWorld();
+  world.fn.sync();
+
+  const titles = world.events(DT).filter((e) => /Discard day/.test(e.title)).map((e) => e.title);
+  assert.ok(titles.length > 0);
+  assert.ok(titles.every((t) => t.startsWith('🗑️ Discard day: ')), titles.join(' | '));
+});
+
+test("the Discard style wins over a kiln style the title's words also match", () => {
+  const world = newWorld();
+  // "Discard day: Bisque, Glazed Fired Work" also matches the Firing pattern.
+  world.eval("CONFIG.EVENT_STYLES.find((s) => s.name === 'Firing').emoji = '🔥'");
+  world.fn.sync();
+
+  const discard = world.events(DT).find((e) => /Discard day/.test(e.title));
+  assert.ok(discard.title.startsWith('🗑️ '), discard.title);
+  assert.ok(!discard.title.includes('🔥'));
+  const firing = world.events(DT).find((e) => /firing/i.test(e.title) && !/Discard/.test(e.title));
+  assert.ok(firing.title.startsWith('🔥 '), 'an ordinary firing gets the fire emoji');
 });

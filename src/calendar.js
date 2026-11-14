@@ -11,54 +11,54 @@ function createEvents_(calendar, cell, parsed) {
     'Check the original note before relying on an event.',
   );
   const options = { description, location: cell.studio.location };
-  /** @type {{ stage: Stage | null, event: CalendarEventHandle }[]} */
+  /** @type {{ style: EventStyle | null, event: CalendarEventHandle }[]} */
   const events = [];
   for (const activity of parsed.activities) {
-    const { stage, title } = stagedTitle_(activity);
+    const { style, title } = styledTitle_(activity);
     events.push({
-      stage,
+      style,
       event: calendar.createAllDayEvent(title, cell.date, options),
     });
   }
   for (const item of parsed.timed) {
     const start = dateAt_(item.date, item.time);
     const end = new Date(start.getTime() + CONFIG.TIMED_EVENT_MINUTES * 60000);
-    const { stage, title } = stagedTitle_(item.title);
+    const { style, title } = styledTitle_(item.title);
     events.push({
-      stage,
+      style,
       event: calendar.createEvent(title, start, end, options),
     });
   }
-  for (const { stage, event } of events) styleEvent_(event, stage);
+  for (const { style, event } of events) styleEvent_(event, style);
   return events.map(({ event }) => event.getId());
 }
 
 /**
- * A stage's optional emoji prefixes the title, carrying the stage to clients that ignore
- * event colors (Apple Calendar).
+ * The matching style's optional emoji prefixes the title, carrying the style to clients
+ * that ignore event colors (Apple Calendar).
  *
  * @param {string} title
- * @returns {{ stage: Stage | null, title: string }}
+ * @returns {{ style: EventStyle | null, title: string }}
  */
-function stagedTitle_(title) {
-  const stage = stageOf_(title);
-  return { stage, title: stage?.emoji ? `${stage.emoji} ${title}` : title };
+function styledTitle_(title) {
+  const style = styleOf_(title);
+  return { style, title: style?.emoji ? `${style.emoji} ${title}` : title };
 }
 
 /**
  * @param {CalendarEventHandle} event
- * @param {Stage | null} stage
+ * @param {EventStyle | null} style
  */
-function styleEvent_(event, stage) {
-  if (stage?.colorId) event.setColor(String(stage.colorId));
+function styleEvent_(event, style) {
+  if (style?.colorId) event.setColor(String(style.colorId));
 }
 
 /**
  * @param {string} title
- * @returns {Stage | null}
+ * @returns {EventStyle | null} the first style in CONFIG.EVENT_STYLES whose pattern matches
  */
-function stageOf_(title) {
-  return CONFIG.STAGES.find((stage) => stage.pattern.test(title)) || null;
+function styleOf_(title) {
+  return CONFIG.EVENT_STYLES.find((style) => style.pattern.test(title)) || null;
 }
 
 /**

@@ -14,10 +14,11 @@ interface Studio {
   location: string;
 }
 
-interface Stage {
+/** How events whose title matches are shown: an emoji in front of the title and/or a label color. */
+interface EventStyle {
   name: string;
   pattern: RegExp;
-  /** The legacy event color ID that owns this stage's label. */
+  /** The legacy event color ID that owns this style's label. */
   colorId?: number;
   emoji?: string;
 }

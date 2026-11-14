@@ -116,8 +116,8 @@ test('validateParsed_ falls back to the raw note when nothing usable is left', (
   }
 });
 
-test('stageOf_ checks unloading before loading', () => {
-  const stage = (title) => fn.stageOf_(title)?.name ?? null;
+test('styleOf_ checks unloading before loading', () => {
+  const stage = (title) => fn.styleOf_(title)?.name ?? null;
   assert.equal(stage('Bisque unloaded'), 'Unloading');
   assert.equal(stage('Reduction unload (late)'), 'Unloading');
   assert.equal(stage('Lowfire bisque unloading'), 'Unloading');
@@ -125,8 +125,8 @@ test('stageOf_ checks unloading before loading', () => {
   assert.equal(stage('Oxidation to be loaded'), 'Loading');
 });
 
-test('stageOf_ recognizes every stage and leaves the rest alone', () => {
-  const stage = (title) => fn.stageOf_(title)?.name ?? null;
+test('styleOf_ recognizes every kiln stage and leaves the rest alone', () => {
+  const stage = (title) => fn.styleOf_(title)?.name ?? null;
   assert.equal(stage('Studio closed for the holiday'), 'Closure');
   assert.equal(stage('Studio closes early'), 'Closure');
   assert.equal(stage('Reduction cooling'), 'Cooling');
@@ -135,7 +135,7 @@ test('stageOf_ recognizes every stage and leaves the rest alone', () => {
   assert.equal(stage('Cart 3 introduced!'), null);
 });
 
-test('describeParsed_ lists events with their stage', () => {
+test('describeParsed_ lists events with their style', () => {
   const text = fn.describeParsed_({
     activities: ['Bisque loading'],
     timed: [{ title: 'Reduction unload', date: '2026-10-10', time: '11:00' }],
@@ -156,9 +156,9 @@ test('cellKey_ changes with studio, date or text, and only those', () => {
   assert.notEqual(fn.cellKey_({ ...base, text: 'note!' }), key);
 });
 
-test('every configured stage color is a valid legacy color ID', () => {
-  for (const stage of world.eval('CONFIG.STAGES')) {
-    if (stage.colorId === undefined) continue;
-    assert.match(String(stage.colorId), /^([1-9]|1[01])$/, stage.name);
+test('every configured style color is a valid legacy color ID', () => {
+  for (const style of world.eval('CONFIG.EVENT_STYLES')) {
+    if (style.colorId === undefined) continue;
+    assert.match(String(style.colorId), /^([1-9]|1[01])$/, style.name);
   }
 });
