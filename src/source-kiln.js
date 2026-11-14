@@ -34,5 +34,5 @@ function kilnSource_() {
  * @returns {Source<any, any>[]}
  */
 function sources_() {
-  return [kilnSource_(), discardSource_()];
+  return [kilnSource_(), discardSource_(), closuresSource_(), classesSource_()];
 }
