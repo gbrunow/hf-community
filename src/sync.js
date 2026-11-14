@@ -104,7 +104,8 @@ function createFresh_({ source, fresh }, context) {
   const { props, dryRun, counts, outOfTime, model } = context;
   if (source.usesModel && fresh.length) context.modelUsed = true;
   const batchSize = Math.ceil(
-    fresh.length / Math.ceil(fresh.length / CONFIG.MAX_NOTES_PER_REQUEST),
+    fresh.length /
+      Math.ceil(fresh.length / (source.maxItemsPerRequest ?? CONFIG.MAX_NOTES_PER_REQUEST)),
   );
   for (let start = 0; start < fresh.length; start += batchSize) {
     if (outOfTime()) {

@@ -215,3 +215,21 @@ test('the summary names the model only when a source that calls Gemini had work'
   plain.fn.sync();
   assert.doesNotMatch(plain.summary(), /Model:/, 'a source that never calls Gemini');
 });
+
+test("a source's own request size caps how many of its items go to parse at once", () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const sizes = [];
+  const source = fakeSource(world, { items: Array.from({ length: 10 }, (_, i) => `item ${i}`) });
+  source.maxItemsPerRequest = 4;
+  const parse = source.parse;
+  source.parse = (payloads, model) => {
+    sizes.push(payloads.length);
+    return parse(payloads, model);
+  };
+  world.context.sources_ = () => [source];
+
+  world.fn.sync();
+
+  assert.deepEqual(sizes, [4, 4, 2]);
+  assert.equal(fakeTitles(world).length, 10);
+});

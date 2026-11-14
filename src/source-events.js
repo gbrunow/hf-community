@@ -119,6 +119,7 @@ function eventsSource_(options) {
     statePrefix: options.statePrefix,
     lookaheadDays: options.lookaheadDays,
     usesModel: true,
+    maxItemsPerRequest: CONFIG.EVENTS_DAYS_PER_REQUEST,
     read: (window) => readEventDays_(options, window),
     parse: (payloads, model) => parseEventDays_(payloads, model, options.prompt),
     createEvents: createDayEvents_,

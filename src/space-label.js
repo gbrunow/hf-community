@@ -12,7 +12,9 @@ function spaceLabel_(wheels, handBuilding) {
   const h = handBuilding.trim();
   if (!w && !h) return null;
 
-  const number = /\d+/.exec(w)?.[0];
+  const found = /\d+/.exec(w)?.[0];
+  // A 0 in the wheels column means the class takes none.
+  const number = Number(found) > 0 ? found : undefined;
   const area = !h ? null : /glaze/i.test(h) ? 'G' : 'HB';
   let label = null;
   if (/glaze/i.test(w)) {

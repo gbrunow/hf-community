@@ -54,6 +54,8 @@ const CONFIG = {
   // Closures and workshops are planned months out; class sessions change more, so fewer.
   EVENTS_LOOKAHEAD_DAYS: 180,
   CLASSES_LOOKAHEAD_DAYS: 60,
+  // Gemini starts dropping fields late in a long reply, so days of events go in small batches.
+  EVENTS_DAYS_PER_REQUEST: 15,
   // Calendar label per kiln stage, from the first pattern matching the event title. The
   // API can't set a label directly: each label owns one of the 11 legacy color IDs, and
   // setting that ID applies it. An ID with no label on a calendar is dropped, so every

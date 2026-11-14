@@ -109,6 +109,8 @@ interface Source<T, R> {
   lookaheadDays?: number;
   /** Whether parse calls Gemini, so the run summary names the model. */
   usesModel?: boolean;
+  /** Most items sent to parse at once; CONFIG.MAX_NOTES_PER_REQUEST when absent. */
+  maxItemsPerRequest?: number;
   /** Reads the items inside the window, which already reflects lookaheadDays. */
   read(window: SyncWindow): Item<T>[];
   /** One result per payload, in order; undefined for a payload that could not be parsed. */

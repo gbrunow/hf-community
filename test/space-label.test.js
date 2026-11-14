@@ -58,3 +58,10 @@ test('the detail repeats the cells as written', () => {
     'Space taken: 15 people, mostly glaze area',
   );
 });
+
+test('a zero in the wheels cell means no wheels', () => {
+  assert.equal(label('0', ''), null);
+  assert.equal(label('0', '8 seats plus tools'), '8 HB');
+  assert.equal(label('0', 'all of HB'), 'all HB');
+  assert.equal(space('0', '8 seats plus tools').detail, 'Space taken: 0 wheels; 8 seats plus tools');
+});
