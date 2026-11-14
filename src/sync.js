@@ -142,6 +142,27 @@ function createFresh_({ source, fresh }, context) {
         continue;
       }
 
+      /** @type {string[]} */
+      let ids = [];
+      if (!dryRun) {
+        const calendar = getCalendar_(item.calendarName, item.sheetUrl);
+        /** @type {string[]} */
+        const created = [];
+        try {
+          ids = source.createEvents(trackCreated_(calendar, created), item.payload, parsed);
+        } catch (e) {
+          // Events made before the failure aren't recorded anywhere, and the next run would
+          // make them again, so they go. A failure here is most often Calendar's quota, which
+          // the rest of this source's items would hit too: leave them for the next run.
+          removeCreated_(calendar, created);
+          console.error(
+            `Skipping ${item.label}: creating its events failed (${e instanceof Error ? e.message : e}); removed the ${created.length} already made.`,
+          );
+          counts.failed += fresh.length - (start + id);
+          return false;
+        }
+      }
+
       counts.added++;
       counts.events += source.countEvents(parsed);
       console.log(
@@ -149,11 +170,6 @@ function createFresh_({ source, fresh }, context) {
       );
       if (dryRun) continue;
 
-      const ids = source.createEvents(
-        getCalendar_(item.calendarName, item.sheetUrl),
-        item.payload,
-        parsed,
-      );
       props.setProperty(
         source.statePrefix + item.key,
         JSON.stringify({
@@ -165,6 +181,46 @@ function createFresh_({ source, fresh }, context) {
     }
   }
   return false;
+}
+
+/**
+ * A calendar that records the ID of every event created through it, so a failure partway
+ * through an item's events can be undone.
+ *
+ * @param {StudioCalendar} calendar
+ * @param {string[]} created filled with the IDs as events are made
+ * @returns {StudioCalendar}
+ */
+function trackCreated_(calendar, created) {
+  return new Proxy(calendar, {
+    get(target, property) {
+      const value = Reflect.get(target, property);
+      if (typeof value !== 'function') return value;
+      const isCreate = property === 'createEvent' || property === 'createAllDayEvent';
+      return (/** @type {unknown[]} */ ...args) => {
+        const result = value.apply(target, args);
+        if (isCreate) created.push(result.getId());
+        return result;
+      };
+    },
+  });
+}
+
+/**
+ * Deletes events by ID, ignoring any that can't be deleted: this runs after a failure and
+ * must not hide it behind another.
+ *
+ * @param {StudioCalendar} calendar
+ * @param {string[]} ids
+ */
+function removeCreated_(calendar, ids) {
+  for (const id of ids) {
+    try {
+      calendar.getEventById(id)?.deleteEvent();
+    } catch (e) {
+      console.warn(`Could not remove the partly made event ${id}: ${e instanceof Error ? e.message : e}`);
+    }
+  }
 }
 
 /**

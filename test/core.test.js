@@ -287,3 +287,68 @@ test('forceSync takes the lock once, since the lock is not reentrant', () => {
   assert.equal(world.allEvents().length, 12);
   assert.equal(world.requests.length, 2);
 });
+
+/** A source that makes two events per item and can fail after the first of an item's. */
+function twoEventSource(world, state) {
+  return {
+    ...fakeSource(world, { items: ['a', 'b', 'c'] }),
+    createEvents: (calendar, text) => {
+      const ids = [calendar.createAllDayEvent(`${text} 1`, new Date(2026, 11, 1), {}).getId()];
+      if (state.failOn === text) {
+        state.beforeFailing?.();
+        throw new (world.eval('Error'))('You have been creating or deleting too many calendars or calendar events');
+      }
+      ids.push(calendar.createAllDayEvent(`${text} 2`, new Date(2026, 11, 1), {}).getId());
+      return ids;
+    },
+    countEvents: () => 2,
+  };
+}
+
+test('events made before a failure are removed, and the rest of the source waits for the next run', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const state = { failOn: 'b' };
+  world.context.sources_ = () => [world.context.kilnSource_(), twoEventSource(world, state)];
+
+  world.fn.sync();
+
+  assert.deepEqual(fakeTitles(world), ['a 1', 'a 2'], 'b 1 was removed; c was not attempted');
+  assert.equal(world.events('Higher Fire · Kiln Notes & Events').length, 7, 'the kiln source was unaffected');
+  assert.equal(Object.keys(world.props).filter((k) => k.startsWith('fake:')).length, 1, 'only a is recorded');
+  assert.match(world.summary(), /2 failed/);
+  assert.ok(world.logs.some((l) => /Skipping fake "b": creating its events failed \(You have been creating or deleting too many.*removed the 1 already made/.test(l.text)));
+
+  state.failOn = null;
+  world.fn.sync();
+  assert.deepEqual(fakeTitles(world), ['a 1', 'a 2', 'b 1', 'b 2', 'c 1', 'c 2'], 'each created once');
+});
+
+test("a failure while cleaning up doesn't hide the original one", () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const state = {
+    failOn: 'a',
+    beforeFailing: () => {
+      world.calendars[FAKE].getEventById = () => {
+        throw new (world.eval('Error'))('delete refused');
+      };
+    },
+  };
+  world.context.sources_ = () => [twoEventSource(world, state)];
+
+  world.fn.sync();
+
+  assert.ok(world.logs.some((l) => /Could not remove the partly made event .*: delete refused/.test(l.text)));
+  assert.ok(world.logs.some((l) => /Skipping fake "a": creating its events failed/.test(l.text)));
+  assert.match(world.summary(), /3 failed/);
+});
+
+test('a dry run never touches the calendar', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const state = { failOn: 'a' };
+  world.context.sources_ = () => [twoEventSource(world, state)];
+
+  world.fn.preview();
+
+  assert.equal(world.allEvents().length, 0);
+  assert.match(world.summary(), /3 new .* 0 failed/);
+});
