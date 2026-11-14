@@ -27,18 +27,18 @@ const closures = (world) =>
     .sort();
 const warnings = (world) => world.logs.filter((l) => l.level === 'warn').map((l) => l.text);
 
-test('class sessions go to the classes calendar with the number of people in front', () => {
+test('class sessions go to the classes calendar with the number of people after the name', () => {
   const world = newWorld();
   world.fn.sync();
 
   assert.deepEqual(classes(world), [
-    '2026-10-08 19:00-22:00 18 · Just Try It',
-    '2026-10-09 14:00-16:00 20 · Wheel Package',
+    '2026-10-08 19:00-22:00 Just Try It · 18',
+    '2026-10-09 14:00-16:00 Wheel Package · 20',
     '2026-10-09 18:00-21:00 Hand-building Sampler',
-    '2026-10-10 10:00-13:00 18 · Just Try It',
-    '2026-10-10 15:00-17:00 6 · Take a Spin',
-    '2026-10-13 10:00-12:00 9 · Mug & Bowl Pkg',
-    '2026-10-14 19:00-22:00 18 · Just Try It',
+    '2026-10-10 10:00-13:00 Just Try It · 18',
+    '2026-10-10 15:00-17:00 Take a Spin · 6',
+    '2026-10-13 10:00-12:00 Mug & Bowl Pkg · 9',
+    '2026-10-14 19:00-22:00 Just Try It · 18',
   ]);
 });
 
@@ -46,7 +46,7 @@ test('a class time before the studio opens is read as the afternoon', () => {
   const world = newWorld();
   world.fn.sync();
 
-  const spin = world.events(CLASSES).find((e) => e.title.endsWith('Take a Spin'));
+  const spin = world.events(CLASSES).find((e) => e.title.startsWith('Take a Spin'));
   assert.equal(hhmm(spin.start), '15:00');
   assert.equal(hhmm(spin.end), '17:00');
 });
@@ -106,7 +106,7 @@ test("a class named like a kiln stage stays plain on the classes calendar", () =
   world.fn.sync();
 
   const event = world.events(CLASSES).find((e) => e.title.includes('Unloading Basics'));
-  assert.equal(event.title, '4 · Unloading Basics', 'no style emoji');
+  assert.equal(event.title, 'Unloading Basics · 4', 'no style emoji');
   assert.equal(event.color, null, 'no style color');
 });
 
@@ -114,7 +114,7 @@ test('a class description states the space in words and links its row', () => {
   const world = newWorld();
   world.fn.sync();
 
-  const event = world.events(CLASSES).find((e) => e.title === '18 · Just Try It');
+  const event = world.events(CLASSES).find((e) => e.title === 'Just Try It · 18');
   const sections = event.description.split('\n\n');
   assert.equal(sections[0], 'Space taken: 18 wheels');
   assert.equal(sections[1], `Original row (Thu, Oct 8):\n${URL_BASE}&range=A4:H4`);
@@ -166,7 +166,7 @@ test("editing a day's rows replaces only that day's events", () => {
 
   world.fn.sync();
 
-  assert.ok(classes(world).includes('2026-10-08 20:00-22:00 12 · Just Try It'));
+  assert.ok(classes(world).includes('2026-10-08 20:00-22:00 Just Try It · 12'));
   assert.ok(!classes(world).some((c) => c.startsWith('2026-10-08 19:00')));
   assert.equal(classes(world).length, 7);
   assert.equal(world.requests.filter((r) => r.kind === 'classes').length, 2);
@@ -202,8 +202,8 @@ test('times that cannot be used make the event all-day instead of losing it', ()
 
   world.fn.sync();
 
-  assert.ok(classes(world).includes('2026-10-08 all day 18 · Just Try It'));
-  assert.ok(classes(world).includes('2026-10-09 all day 20 · Wheel Package'));
+  assert.ok(classes(world).includes('2026-10-08 all day Just Try It · 18'));
+  assert.ok(classes(world).includes('2026-10-09 all day Wheel Package · 20'));
   assert.equal(warnings(world).filter((w) => /unusable times/.test(w)).length, 2);
 });
 

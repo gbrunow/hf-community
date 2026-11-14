@@ -1,5 +1,5 @@
 /**
- * How many people an event has room for, for the front of its title, and the words for the
+ * How many people an event has room for, for the end of its title, and the words for the
  * top of its description. A class takes the same number of wheels, seats or glaze-area
  * places for each person, so the title shows just that number.
  *
