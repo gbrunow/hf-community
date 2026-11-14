@@ -192,12 +192,8 @@ function calendarApp(world) {
         addEvent(events, { title, date, allDay: true, ...options }),
       createEvent: (title, start, end, options) =>
         addEvent(events, { title, start, end, allDay: false, ...options }),
-      getEventById: (id) =>
-        events[id] ? { deleteEvent: () => delete events[id] } : null,
-      getEvents: () =>
-        Object.values(events).map((record) => ({
-          deleteEvent: () => delete events[record.id],
-        })),
+      getEventById: (id) => (events[id] ? handle(events, events[id]) : null),
+      getEvents: () => Object.values(events).map((record) => handle(events, record)),
     };
     world.calendars[name] = calendar;
     return calendar;
@@ -213,10 +209,19 @@ function addEvent(events, fields) {
   const id = `event-${nextEventId++}`;
   const record = { id, color: null, ...fields };
   events[id] = record;
+  return handle(events, record);
+}
+
+/** What Apps Script's CalendarEvent offers for a stored event record. */
+function handle(events, record) {
   return {
-    getId: () => id,
+    getId: () => record.id,
     getTitle: () => record.title,
+    getDescription: () => record.description || '',
+    getStartTime: () => record.start || record.date,
+    getEndTime: () => record.end || record.date,
     isAllDayEvent: () => record.allDay,
+    deleteEvent: () => delete events[record.id],
     setColor: (color) => {
       // Calendar rejects anything but the 11 legacy color IDs, as strings.
       if (!/^([1-9]|1[01])$/.test(color)) {

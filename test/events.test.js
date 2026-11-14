@@ -417,24 +417,6 @@ test('resetSource names the sources when given a wrong one', () => {
   assert.throws(() => world.fn.resetSource('nope'), /No source named "nope"; the sources are kiln, discard, closures, classes/);
 });
 
-test('purgeClasses clears the classes calendar, orphans included, and nothing else', () => {
-  const world = newWorld();
-  world.fn.sync();
-  const closureCount = closures(world).length;
-  // Two runs that overlap leave copies no state entry points to.
-  world.calendars[CLASSES].createAllDayEvent('orphan copy', new Date(2026, 10, 14), {});
-
-  world.fn.purgeClasses();
-
-  assert.equal(world.events(CLASSES).length, 0);
-  assert.equal(closures(world).length, closureCount, 'closures untouched');
-  assert.ok(world.events(DT).some((e) => e.title.includes('Bisque')), 'kiln events untouched');
-  assert.deepEqual(Object.keys(world.props).filter((k) => k.startsWith('classes:')), []);
-
-  world.fn.sync();
-  assert.equal(classes(world).length, 7, 'rebuilt by the next sync');
-});
-
 const OLD_MAIN = 'Higher Fire · Downtown';
 const OLD_CLASSES = 'Higher Fire · Downtown Classes';
 

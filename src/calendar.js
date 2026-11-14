@@ -138,3 +138,55 @@ function getCalendar_(name, sheetUrl) {
   }
   return calendarCache_[name];
 }
+
+/**
+ * Whether the script made this event. Every event it makes carries the disclaimer line in its
+ * description and one made by hand doesn't, so only the script's are ever candidates for
+ * cleanup or reporting. A text match errs toward leaving an event alone: if the wording
+ * changes, older events stop matching rather than a hand-made one starting to.
+ *
+ * @param {CalendarEventHandle} event
+ * @returns {boolean}
+ */
+function isScriptEvent_(event) {
+  return event.getDescription().includes(CONFIG.DISCLAIMER);
+}
+
+/**
+ * Sorts the events on the studios' calendars, across the sync window, into those the script
+ * made and some stored item owns, those it made that none owns (leftovers of a failed run, or
+ * copies from overlapping ones), and those made by hand, which are only counted.
+ *
+ * @returns {{ untracked: { calendarName: string, event: CalendarEventHandle }[], tracked: number, manual: number, missing: string[] }}
+ */
+function scanCalendars_() {
+  const props = PropertiesService.getScriptProperties();
+  /** @type {Set<string>} */
+  const owned = new Set();
+  for (const source of sources_()) {
+    for (const entry of Object.values(loadState_(props, source.statePrefix))) {
+      for (const id of entry.ids) owned.add(id);
+    }
+  }
+  const today = startOfDay_(new Date());
+  const from = addDays_(today, -CONFIG.WINDOW_PAST_DAYS);
+  const to = addDays_(today, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1);
+  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
+    s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
+  );
+  /** @type {{ untracked: { calendarName: string, event: CalendarEventHandle }[], tracked: number, manual: number, missing: string[] }} */
+  const scan = { untracked: [], tracked: 0, manual: 0, missing: [] };
+  for (const name of names) {
+    const calendar = CalendarApp.getCalendarsByName(name)[0];
+    if (!calendar) {
+      scan.missing.push(name);
+      continue;
+    }
+    for (const event of calendar.getEvents(from, to)) {
+      if (!isScriptEvent_(event)) scan.manual++;
+      else if (owned.has(event.getId())) scan.tracked++;
+      else scan.untracked.push({ calendarName: name, event });
+    }
+  }
+  return scan;
+}

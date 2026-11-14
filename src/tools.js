@@ -253,8 +253,9 @@ function tryEventDays(kind, isoDates) {
 }
 
 /**
- * Finds events that appear more than once (same title, start and calendar) on the studios'
- * calendars from yesterday through the longest look-ahead. Read-only.
+ * Finds events the script made that appear more than once (same title, start and calendar) on
+ * the studios' calendars from yesterday through the longest look-ahead. Read-only; events
+ * made by hand are ignored.
  *
  * @returns {string[]} one line per duplicated event, or a single line saying there are none
  */
@@ -273,6 +274,7 @@ function findDuplicateEvents() {
     /** @type {Record<string, number>} */
     const seen = {};
     for (const event of calendar.getEvents(from, to)) {
+      if (!isScriptEvent_(event)) continue;
       checked++;
       const key = `${event.getStartTime().toISOString()} ${event.isAllDayEvent() ? 'all-day' : event.getEndTime().toISOString()} ${event.getTitle()}`;
       seen[key] = (seen[key] || 0) + 1;
@@ -285,41 +287,20 @@ function findDuplicateEvents() {
 }
 
 /**
- * Lists events on the studios' calendars that no stored item owns: leftovers from a run
- * that failed midway, or copies from two overlapping runs. Read-only; it covers the sync
- * window (older events are deliberately left on the calendar and forgotten).
+ * Lists the events the script made on the studios' calendars that no stored item owns:
+ * leftovers from a run that failed midway, or copies from two overlapping runs. Read-only;
+ * it covers the sync window (older events are deliberately left on the calendar and
+ * forgotten). Events made by hand are counted and left out. removeUntrackedEvents() deletes
+ * what this lists.
  *
  * @returns {string[]} one line per untracked event, or a single line saying there are none
  */
 function findUntrackedEvents() {
-  const props = PropertiesService.getScriptProperties();
-  /** @type {Set<string>} */
-  const tracked = new Set();
-  for (const source of sources_()) {
-    for (const entry of Object.values(loadState_(props, source.statePrefix))) {
-      for (const id of entry.ids) tracked.add(id);
-    }
+  const scan = scanCalendars_();
+  const lines = scan.missing.map((name) => `${name}: no calendar by this name`);
+  for (const { calendarName, event } of scan.untracked) {
+    lines.push(`${calendarName}: ${isoDate_(new Date(event.getStartTime().getTime()))} ${event.getTitle()}`);
   }
-  const today = startOfDay_(new Date());
-  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
-    s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
-  );
-  /** @type {string[]} */
-  const lines = [];
-  let checked = 0;
-  for (const name of names) {
-    const calendar = CalendarApp.getCalendarsByName(name)[0];
-    if (!calendar) {
-      lines.push(`${name}: no calendar by this name`);
-      continue;
-    }
-    const from = addDays_(today, -CONFIG.WINDOW_PAST_DAYS);
-    for (const event of calendar.getEvents(from, addDays_(today, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1))) {
-      checked++;
-      if (!tracked.has(event.getId())) {
-        lines.push(`${name}: ${isoDate_(new Date(event.getStartTime().getTime()))} ${event.getTitle()}`);
-      }
-    }
-  }
-  return lines.length ? lines : [`Every one of ${checked} events is tracked.`];
+  const manual = scan.manual ? `, ${scan.manual} made by hand and left alone` : '';
+  return lines.length ? lines : [`Every one of ${scan.tracked} events the script made is tracked${manual}.`];
 }

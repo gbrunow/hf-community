@@ -207,27 +207,16 @@ function resetOne_(name) {
 }
 
 /**
- * Like resetSource("classes"), and also deletes the events on the classes calendars that no
- * state entry points to, such as the copies two overlapping runs once created. Those
- * calendars hold nothing but class sessions, so every event on them can go.
+ * Deletes the events the script made but no stored item owns: leftovers of a failed run, or
+ * copies from overlapping ones. Events made by hand are never touched. It covers the sync
+ * window; run findUntrackedEvents() first to see what it would delete. Run it with
+ * `npm run fn -- removeUntrackedEvents`.
  */
-function purgeClasses() {
-  withLock_('purgeClasses', () => {
-    const props = PropertiesService.getScriptProperties();
-    const classes = sources_().find((source) => source.name === 'classes');
-    let events = classes ? clearSource_(classes, props) : 0;
-    const today = startOfDay_(new Date());
-    for (const studio of CONFIG.STUDIOS) {
-      const calendar = studio.classesCalendarName
-        ? CalendarApp.getCalendarsByName(studio.classesCalendarName)[0]
-        : undefined;
-      if (!calendar) continue;
-      for (const event of calendar.getEvents(addDays_(today, -60), addDays_(today, 400))) {
-        event.deleteEvent();
-        events++;
-      }
-    }
-    console.log(`Purged the classes: deleted ${events} event(s). Run sync() to rebuild.`);
+function removeUntrackedEvents() {
+  withLock_('removeUntrackedEvents', () => {
+    const { untracked } = scanCalendars_();
+    for (const { event } of untracked) event.deleteEvent();
+    console.log(`Removed ${untracked.length} untracked event(s) the script made.`);
   });
 }
 
