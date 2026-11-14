@@ -109,3 +109,32 @@ interface Source<T, R> {
   describe(result: R): string;
   countEvents(result: R): number;
 }
+
+/** A studio's discard schedule tab, as read for parsing. */
+interface DiscardTab {
+  studio: Studio;
+  tabName: string;
+  /** Opens the sheet on this tab. */
+  tabUrl: string;
+  /** One row per line, the cells of a row joined with " | ". */
+  text: string;
+  /** Resolves the years the schedule leaves out. */
+  today: Date;
+}
+
+/** A date as the schedule writes it; the year only when it writes one. */
+interface RawDiscardDate {
+  month?: number;
+  day?: number;
+  year?: number;
+}
+
+/** What Gemini returns for a discard schedule, before the dates are resolved. */
+interface RawDiscard {
+  groups?: { workType?: string; dates?: RawDiscardDate[] }[];
+}
+
+interface DiscardResult {
+  /** All-day events, soonest first; date is YYYY-MM-DD. */
+  events: { date: string; title: string }[];
+}
