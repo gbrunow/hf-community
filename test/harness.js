@@ -41,6 +41,7 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
       drop: new Set(),
       parse: fakeParse,
       parseDiscard: fakeParseDiscard,
+      parseDays: fakeParseDays,
     },
     nowMs: new Date(today).getTime(),
   };
@@ -224,25 +225,74 @@ function fakeParseDiscard({ text }) {
   return { groups };
 }
 
+/** "1:00 PM" → "13:00"; "3:00 AM" → "03:00" (the fake doesn't fix the typo, the code must). */
+function to24(text) {
+  const match = /^(\d{1,2}):(\d\d) ([AP]M)$/.exec(text || '');
+  if (!match) return undefined;
+  const hour = (Number(match[1]) % 12) + (match[3] === 'PM' ? 12 : 0);
+  return `${String(hour).padStart(2, '0')}:${match[2]}`;
+}
+
+/** Reads each day's rows the way the class and announcement prompts ask. */
+function fakeParseDays(kind, days) {
+  const results = days.map((day) => {
+    const events = day.rows.map((row) => {
+      if (kind === 'classes') {
+        return {
+          title: row.Event,
+          start: to24(row.Start),
+          end: to24(row.End),
+          wheels: row['# of Wheels'],
+          handBuilding: row['Hand-building'],
+        };
+      }
+      if (row['Side table']) {
+        const [, time, title, area] = row['Side table'].split(' | ');
+        const range = /^(\d+)am-(\d+)pm$/.exec(time);
+        return {
+          title,
+          start: range && `${String(range[1]).padStart(2, '0')}:00`,
+          end: range && `${String((Number(range[2]) % 12) + 12).padStart(2, '0')}:00`,
+          handBuilding: area,
+        };
+      }
+      return { title: Object.values(row).join(' - ') };
+    });
+    return { id: day.id, events };
+  });
+  return { results };
+}
+
 function gemini(world, url, request) {
   const payload = JSON.parse(request.payload);
   const input = JSON.parse(payload.contents[0].parts[0].text);
-  const isDiscard = /discard schedule/i.test(payload.systemInstruction.parts[0].text);
-  const notes = isDiscard ? undefined : input;
+  const system = payload.systemInstruction.parts[0].text;
+  const kind = /discard schedule/i.test(system)
+    ? 'discard'
+    : /class schedule/i.test(system)
+      ? 'classes'
+      : /announcements from/i.test(system)
+        ? 'closures'
+        : 'kiln';
+  const notes = kind === 'kiln' ? input : undefined;
   world.requests.push({
     url,
+    kind,
     notes,
-    discard: isDiscard ? input : undefined,
+    discard: kind === 'discard' ? input : undefined,
+    days: kind === 'classes' || kind === 'closures' ? input : undefined,
     generationConfig: payload.generationConfig,
   });
   if (world.gemini.failCode) {
     return response(world.gemini.failCode, { error: { message: 'failure' } });
   }
-  if (isDiscard) {
-    const reply = world.gemini.parseDiscard(input);
-    return response(200, {
-      candidates: [{ content: { parts: [{ text: JSON.stringify(reply) }] } }],
+  const reply = (body) =>
+    response(200, {
+      candidates: [{ content: { parts: [{ text: JSON.stringify(body) }] } }],
     });
+  if (kind === 'discard') return reply(world.gemini.parseDiscard(input));
+  if (kind === 'classes' || kind === 'closures') {
+    return reply(world.gemini.parseDays(kind, input));
   }
   const results = notes
     .filter((note) => !world.gemini.drop.has(note.note))
