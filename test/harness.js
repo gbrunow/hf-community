@@ -23,7 +23,18 @@ const DEFAULT_TODAY = '2026-10-09T10:00:00';
  *   props: initial script properties
  *   today: local ISO date-time that new Date() and Date.now() return
  */
-function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
+// The emojis and colors the tests expect, so choosing different ones in the config doesn't
+// break them. The patterns and their order still come from the real config.
+const TEST_STYLES = {
+  Discard: { emoji: '🗑️' },
+  Closure: { emoji: '🔴', colorId: 4 },
+  Unloading: { emoji: '🟢', colorId: 11 },
+  Cooling: {},
+  Firing: {},
+  Loading: { emoji: '🔵', colorId: 6 },
+};
+
+function createWorld({ tabs, props = {}, today = DEFAULT_TODAY, pinStyles = true } = {}) {
   const world = {
     props: {
       SOURCE_SPREADSHEET_ID: 'SHEET',
@@ -105,6 +116,17 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
   }
   world.fn = world.context; // Top-level functions become context properties.
   vm.runInContext('CONFIG.STUDIOS.forEach((studio) => { studio.enabled = true; })', world.context);
+  if (pinStyles) {
+    world.context.TEST_STYLES = TEST_STYLES;
+    vm.runInContext(
+      `CONFIG.EVENT_STYLES.forEach((style) => {
+        delete style.emoji;
+        delete style.colorId;
+        Object.assign(style, TEST_STYLES[style.name] || {});
+      })`,
+      world.context,
+    );
+  }
   world.eval = (expression) => vm.runInContext(expression, world.context);
 
   world.events = (calendarName) =>

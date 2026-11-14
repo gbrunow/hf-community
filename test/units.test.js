@@ -4,6 +4,8 @@ const { createWorld } = require('./harness');
 const { TAB, kilnRows } = require('./fixture');
 
 const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+// The real styles, to check the configuration itself rather than the pinned test ones.
+const realStyles = createWorld({ tabs: {}, pinStyles: false });
 const fn = world.fn;
 const date = (y, m, d) => new world.context.Date(y, m - 1, d);
 const iso = (d) => fn.isoDate_(d);
@@ -157,7 +159,7 @@ test('cellKey_ changes with studio, date or text, and only those', () => {
 });
 
 test('every configured style color is a valid legacy color ID', () => {
-  for (const style of world.eval('CONFIG.EVENT_STYLES')) {
+  for (const style of realStyles.eval('CONFIG.EVENT_STYLES')) {
     if (style.colorId === undefined) continue;
     assert.match(String(style.colorId), /^([1-9]|1[01])$/, style.name);
   }
