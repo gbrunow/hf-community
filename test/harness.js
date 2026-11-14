@@ -36,7 +36,12 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
     requests: [],
     sleeps: [],
     triggers: [],
-    gemini: { failCode: null, drop: new Set(), parse: fakeParse },
+    gemini: {
+      failCode: null,
+      drop: new Set(),
+      parse: fakeParse,
+      parseDiscard: fakeParseDiscard,
+    },
     nowMs: new Date(today).getTime(),
   };
   world.now = () => world.nowMs;
@@ -197,12 +202,46 @@ function fakeParse(note) {
   return { id: note.id, events };
 }
 
+/** Reads "Label: | 9/14/2026 | Oct 1 → Dec 1" lines into groups of dates, as written. */
+function fakeParseDiscard({ text }) {
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const groups = [];
+  for (const line of text.split('\n')) {
+    const [label, ...rest] = line.split(':');
+    if (!rest.length) continue;
+    const dates = [];
+    for (const token of rest.join(':').split(/[|→,]/)) {
+      const full = token.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      const named = token.match(/([A-Za-z]{3}) (\d{1,2})/);
+      if (full) dates.push({ month: +full[1], day: +full[2], year: +full[3] });
+      else if (named && months.includes(named[1].toLowerCase())) {
+        dates.push({ month: months.indexOf(named[1].toLowerCase()) + 1, day: +named[2] });
+      }
+    }
+    if (dates.length) groups.push({ workType: label.trim(), dates });
+  }
+  return { groups };
+}
+
 function gemini(world, url, request) {
   const payload = JSON.parse(request.payload);
-  const notes = JSON.parse(payload.contents[0].parts[0].text);
-  world.requests.push({ url, notes, generationConfig: payload.generationConfig });
+  const input = JSON.parse(payload.contents[0].parts[0].text);
+  const isDiscard = /discard schedule/i.test(payload.systemInstruction.parts[0].text);
+  const notes = isDiscard ? undefined : input;
+  world.requests.push({
+    url,
+    notes,
+    discard: isDiscard ? input : undefined,
+    generationConfig: payload.generationConfig,
+  });
   if (world.gemini.failCode) {
     return response(world.gemini.failCode, { error: { message: 'failure' } });
+  }
+  if (isDiscard) {
+    const reply = world.gemini.parseDiscard(input);
+    return response(200, {
+      candidates: [{ content: { parts: [{ text: JSON.stringify(reply) }] } }],
+    });
   }
   const results = notes
     .filter((note) => !world.gemini.drop.has(note.note))
