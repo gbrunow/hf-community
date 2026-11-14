@@ -81,7 +81,6 @@ function geminiModel_(forPreview) {
  * @returns {(Parsed | undefined)[]}
  */
 function parseNotes_(cells, model) {
-  const apiKey = requiredProperty_('GEMINI_API_KEY');
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const notes = cells.map((cell, id) => ({
     id,
@@ -89,6 +88,31 @@ function parseNotes_(cells, model) {
     weekday: weekdays[cell.date.getDay()],
     note: cell.text,
   }));
+  const reply = callGemini_({
+    systemPrompt: SYSTEM_PROMPT,
+    schema: RESPONSE_SCHEMA,
+    input: notes,
+    model,
+  });
+  /** @type {(Parsed | undefined)[]} */
+  const results = [];
+  for (const result of reply.results || []) {
+    const cell = cells[result.id];
+    if (cell && !results[result.id]) {
+      results[result.id] = validateParsed_(result, cell);
+    }
+  }
+  return results;
+}
+
+/**
+ * Sends one structured-output request and returns the parsed reply, retrying server errors.
+ *
+ * @param {{ systemPrompt: string, schema: object, input: unknown, model: string }} options
+ * @returns {any}
+ */
+function callGemini_({ systemPrompt, schema, input, model }) {
+  const apiKey = requiredProperty_('GEMINI_API_KEY');
   const thinkingLevel =
     PropertiesService.getScriptProperties().getProperty(
       'GEMINI_THINKING_LEVEL',
@@ -96,7 +120,7 @@ function parseNotes_(cells, model) {
   /** @type {Record<string, unknown>} */
   const generationConfig = {
     responseMimeType: 'application/json',
-    responseSchema: RESPONSE_SCHEMA,
+    responseSchema: schema,
   };
   if (thinkingLevel !== 'default') {
     generationConfig.thinkingConfig = { thinkingLevel };
@@ -109,8 +133,8 @@ function parseNotes_(cells, model) {
     headers: { 'x-goog-api-key': apiKey },
     muteHttpExceptions: true,
     payload: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: JSON.stringify(notes) }] }],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: JSON.stringify(input) }] }],
       generationConfig,
     }),
   };
@@ -140,15 +164,7 @@ function parseNotes_(cells, model) {
     .filter((part) => !part.thought)
     .map((part) => part.text)
     .join('');
-  /** @type {(Parsed | undefined)[]} */
-  const results = [];
-  for (const result of JSON.parse(text).results || []) {
-    const cell = cells[result.id];
-    if (cell && !results[result.id]) {
-      results[result.id] = validateParsed_(result, cell);
-    }
-  }
-  return results;
+  return JSON.parse(text);
 }
 
 /**
