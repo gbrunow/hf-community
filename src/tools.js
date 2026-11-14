@@ -251,3 +251,35 @@ function tryEventDays(kind, isoDates) {
   return `${days.length} days sent, ${events.length} events back, ${withoutTimes.length} missing a start or an end` +
     (withoutTimes.length ? `; first: ${JSON.stringify(withoutTimes[0])}` : '');
 }
+
+/**
+ * Finds events that appear more than once (same title, start and calendar) on the studios'
+ * calendars from yesterday through the longest look-ahead. Read-only.
+ *
+ * @returns {string[]} one line per duplicated event, or a single line saying there are none
+ */
+function findDuplicateEvents() {
+  const from = addDays_(startOfDay_(new Date()), -1);
+  const to = addDays_(from, CONFIG.EVENTS_LOOKAHEAD_DAYS + 1);
+  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
+    s.classesCalendarName ? [s.calendarName, s.classesCalendarName] : [s.calendarName],
+  );
+  /** @type {string[]} */
+  const lines = [];
+  let checked = 0;
+  for (const name of names) {
+    const calendar = CalendarApp.getCalendarsByName(name)[0];
+    if (!calendar) continue;
+    /** @type {Record<string, number>} */
+    const seen = {};
+    for (const event of calendar.getEvents(from, to)) {
+      checked++;
+      const key = `${event.getStartTime().toISOString()} ${event.isAllDayEvent() ? 'all-day' : event.getEndTime().toISOString()} ${event.getTitle()}`;
+      seen[key] = (seen[key] || 0) + 1;
+    }
+    for (const [key, count] of Object.entries(seen)) {
+      if (count > 1) lines.push(`${name}: x${count} ${key}`);
+    }
+  }
+  return lines.length ? lines : [`No duplicates among ${checked} events.`];
+}
