@@ -116,10 +116,14 @@ function syncMaxDaysAhead_() {
 function reset() {
   const props = PropertiesService.getScriptProperties();
   let events = 0;
-  for (const [key, entry] of Object.entries(loadState_(props))) {
-    deleteEvents_(entry);
-    events += entry.ids.length;
-    props.deleteProperty(STATE_PREFIX + key);
+  for (const source of sources_()) {
+    for (const [key, entry] of Object.entries(
+      loadState_(props, source.statePrefix),
+    )) {
+      deleteEvents_(entry);
+      events += entry.ids.length;
+      props.deleteProperty(source.statePrefix + key);
+    }
   }
   console.log(`Reset: deleted ${events} event(s). Run sync() to rebuild.`);
 }

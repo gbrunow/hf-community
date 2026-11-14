@@ -55,8 +55,8 @@ interface RawParsed {
 /** What the script remembers about a synced cell. */
 interface SyncedEntry {
   calendarName: string;
-  /** YYYY-MM-DD */
-  date: string;
+  /** YYYY-MM-DD; null for items that belong to no single day. */
+  date: string | null;
   ids: string[];
 }
 
@@ -64,3 +64,40 @@ type StudioCalendar = GoogleAppsScript.Calendar.Calendar;
 type CalendarEventHandle = GoogleAppsScript.Calendar.CalendarEvent;
 type ScriptProperties = GoogleAppsScript.Properties.Properties;
 type SheetTab = GoogleAppsScript.Spreadsheet.Sheet;
+
+/** The part of the calendar a sync run covers. */
+interface SyncWindow {
+  today: Date;
+  windowStart: Date;
+  windowEnd: Date;
+}
+
+/**
+ * One unit a source syncs: a studio's note for a day, or a whole tab. Its key changes
+ * when its content does, so a changed item is a new item and the old one disappears.
+ */
+interface Item<T> {
+  key: string;
+  /** The day it belongs to, deciding when it ages out of the window; null for items that belong to no single day. */
+  date: Date | null;
+  calendarName: string;
+  /** The sheet URL linked from the calendar's description. */
+  sheetUrl: string;
+  /** Identifies the item in logs. */
+  label: string;
+  payload: T;
+}
+
+/** A sheet tab (or part of one) that becomes calendar events. T is a payload, R a parse result. */
+interface Source<T, R> {
+  name: string;
+  /** Prefix of this source's entries in the script properties. */
+  statePrefix: string;
+  read(window: SyncWindow): Item<T>[];
+  /** One result per payload, in order; undefined for a payload that could not be parsed. */
+  parse(payloads: T[], model: string): (R | undefined)[];
+  /** Creates the events and returns their IDs. */
+  createEvents(calendar: StudioCalendar, payload: T, result: R): string[];
+  describe(result: R): string;
+  countEvents(result: R): number;
+}

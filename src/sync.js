@@ -1,4 +1,11 @@
-const STATE_PREFIX = 'cell:';
+/**
+ * @typedef {Object} SyncContext
+ * @property {ScriptProperties} props
+ * @property {boolean} dryRun
+ * @property {{ cells: number, unchanged: number, added: number, events: number, removed: number, failed: number, deferred: number }} counts
+ * @property {() => boolean} outOfTime
+ * @property {string} model
+ */
 
 /**
  * @param {{ dryRun: boolean, pastDays: number }} options
@@ -11,8 +18,6 @@ function run_({ dryRun, pastDays }) {
   const windowEnd = addDays_(today, syncMaxDaysAhead_());
 
   const props = PropertiesService.getScriptProperties();
-  const state = loadState_(props);
-  const seen = new Set();
   const counts = {
     cells: 0,
     unchanged: 0,
@@ -22,102 +27,45 @@ function run_({ dryRun, pastDays }) {
     failed: 0,
     deferred: 0,
   };
+  /** @type {SyncContext} */
+  const context = {
+    props,
+    dryRun,
+    counts,
+    outOfTime,
+    model: geminiModel_(dryRun),
+  };
 
-  const model = geminiModel_(dryRun);
-  /** @type {{ cell: Cell, key: string }[]} */
-  const fresh = [];
-  for (const cell of readCells_(today, windowStart, windowEnd)) {
-    counts.cells++;
-    const key = cellKey_(cell);
-    seen.add(key);
-    if (state[key]) {
-      counts.unchanged++;
+  // Every source is read before anything is written, so a source that can't be read
+  // (say, a missing tab) fails the run instead of looking like every item was cleared.
+  const runs = sources_().map((source) => {
+    const state = loadState_(props, source.statePrefix);
+    /** @type {Set<string>} */
+    const seen = new Set();
+    /** @type {Item<any>[]} */
+    const fresh = [];
+    for (const item of source.read({ today, windowStart, windowEnd })) {
+      counts.cells++;
+      seen.add(item.key);
+      if (state[item.key]) {
+        counts.unchanged++;
+      } else {
+        fresh.push(item);
+      }
+    }
+    return { source, state, seen, fresh };
+  });
+
+  let timedOut = false;
+  for (const run of runs) {
+    if (timedOut) {
+      counts.deferred += run.fresh.length;
     } else {
-      fresh.push({ cell, key });
+      timedOut = createFresh_(run, context);
     }
   }
-
-  const batchSize = Math.ceil(
-    fresh.length / Math.ceil(fresh.length / CONFIG.MAX_NOTES_PER_REQUEST),
-  );
-  batches: for (let start = 0; start < fresh.length; start += batchSize) {
-    if (outOfTime()) {
-      counts.deferred += fresh.length - start;
-      break;
-    }
-    const batch = fresh.slice(start, start + batchSize);
-    /** @type {(Parsed | undefined)[]} */
-    let results;
-    try {
-      results = parseNotes_(
-        batch.map(({ cell }) => cell),
-        model,
-      );
-    } catch (e) {
-      // Later batches would most likely hit the same error (usually a rate limit), so
-      // leave everything left for the next run.
-      console.error(
-        `Skipping ${fresh.length - start} note(s) until the next run: ${e instanceof Error ? e.message : e}`,
-      );
-      counts.failed += fresh.length - start;
-      break;
-    }
-
-    for (const [id, { cell, key }] of batch.entries()) {
-      if (outOfTime()) {
-        counts.deferred += fresh.length - (start + id);
-        break batches;
-      }
-      const parsed = results[id];
-      if (!parsed) {
-        console.error(
-          `Skipping ${describe_(cell)}: missing from Gemini's reply`,
-        );
-        counts.failed++;
-        continue;
-      }
-
-      counts.added++;
-      counts.events += parsed.activities.length + parsed.timed.length;
-      console.log(
-        `${dryRun ? 'Would add' : 'Added'} ${describe_(cell)}\n  → ${describeParsed_(parsed)}`,
-      );
-      if (dryRun) continue;
-
-      const ids = createEvents_(
-        getCalendar_(cell.studio.calendarName, cell.sheetUrl),
-        cell,
-        parsed,
-      );
-      props.setProperty(
-        STATE_PREFIX + key,
-        JSON.stringify({
-          calendarName: cell.studio.calendarName,
-          date: isoDate_(cell.date),
-          ids,
-        }),
-      );
-    }
-  }
-
-  for (const [key, entry] of Object.entries(state)) {
-    if (seen.has(key)) continue;
-    const date = parseIsoDate_(entry.date);
-    if (date < windowStart) {
-      // Aged out of the window: keep its events, forget the cell.
-      if (!dryRun) props.deleteProperty(STATE_PREFIX + key);
-      continue;
-    }
-    if (date > windowEnd) continue;
-
-    // Inside the window but no longer in the sheet: the cell was edited or cleared.
-    counts.removed += entry.ids.length;
-    console.log(
-      `${dryRun ? 'Would remove' : 'Removed'} ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date}`,
-    );
-    if (dryRun) continue;
-    deleteEvents_(entry);
-    props.deleteProperty(STATE_PREFIX + key);
+  for (const run of runs) {
+    removeVanished_(run, windowStart, windowEnd, context);
   }
 
   console.log(
@@ -128,8 +76,115 @@ function run_({ dryRun, pastDays }) {
       (counts.deferred
         ? `, ${counts.deferred} left for the next run (out of time).`
         : '.') +
-      (counts.added || counts.failed ? ` Model: ${model}.` : ''),
+      (counts.added || counts.failed ? ` Model: ${context.model}.` : ''),
   );
+}
+
+/**
+ * Parses a source's new items in batches and creates their events. Returns whether the
+ * run ran out of time.
+ *
+ * @param {{ source: Source<any, any>, fresh: Item<any>[] }} run
+ * @param {SyncContext} context
+ * @returns {boolean}
+ */
+function createFresh_({ source, fresh }, context) {
+  const { props, dryRun, counts, outOfTime, model } = context;
+  const batchSize = Math.ceil(
+    fresh.length / Math.ceil(fresh.length / CONFIG.MAX_NOTES_PER_REQUEST),
+  );
+  for (let start = 0; start < fresh.length; start += batchSize) {
+    if (outOfTime()) {
+      counts.deferred += fresh.length - start;
+      return true;
+    }
+    const batch = fresh.slice(start, start + batchSize);
+    /** @type {unknown[]} */
+    let results;
+    try {
+      results = source.parse(
+        batch.map((item) => item.payload),
+        model,
+      );
+    } catch (e) {
+      // Later batches would most likely hit the same error (usually a rate limit), so
+      // leave everything left for the next run.
+      console.error(
+        `Skipping ${fresh.length - start} ${source.name} item(s) until the next run: ${e instanceof Error ? e.message : e}`,
+      );
+      counts.failed += fresh.length - start;
+      return false;
+    }
+
+    for (const [id, item] of batch.entries()) {
+      if (outOfTime()) {
+        counts.deferred += fresh.length - (start + id);
+        return true;
+      }
+      const parsed = results[id];
+      if (!parsed) {
+        console.error(`Skipping ${item.label}: missing from Gemini's reply`);
+        counts.failed++;
+        continue;
+      }
+
+      counts.added++;
+      counts.events += source.countEvents(parsed);
+      console.log(
+        `${dryRun ? 'Would add' : 'Added'} ${item.label}\n  → ${source.describe(parsed)}`,
+      );
+      if (dryRun) continue;
+
+      const ids = source.createEvents(
+        getCalendar_(item.calendarName, item.sheetUrl),
+        item.payload,
+        parsed,
+      );
+      props.setProperty(
+        source.statePrefix + item.key,
+        JSON.stringify({
+          calendarName: item.calendarName,
+          date: item.date ? isoDate_(item.date) : null,
+          ids,
+        }),
+      );
+    }
+  }
+  return false;
+}
+
+/**
+ * Removes the events of items that are no longer in the source: edited or cleared
+ * (inside the window), or aged out of it (forgotten, their events kept). Items without a
+ * date are never in the window or out of it, so they are removed whenever they vanish.
+ *
+ * @param {{ source: Source<any, any>, state: Record<string, SyncedEntry>, seen: Set<string> }} run
+ * @param {Date} windowStart
+ * @param {Date} windowEnd
+ * @param {SyncContext} context
+ */
+function removeVanished_({ source, state, seen }, windowStart, windowEnd, context) {
+  const { props, dryRun, counts } = context;
+  for (const [key, entry] of Object.entries(state)) {
+    if (seen.has(key)) continue;
+    if (entry.date) {
+      const date = parseIsoDate_(entry.date);
+      if (date < windowStart) {
+        // Aged out of the window: keep its events, forget the item.
+        if (!dryRun) props.deleteProperty(source.statePrefix + key);
+        continue;
+      }
+      if (date > windowEnd) continue;
+    }
+
+    counts.removed += entry.ids.length;
+    console.log(
+      `${dryRun ? 'Would remove' : 'Removed'} ${entry.ids.length} event(s) for ${entry.calendarName} ${entry.date ?? source.name}`,
+    );
+    if (dryRun) continue;
+    deleteEvents_(entry);
+    props.deleteProperty(source.statePrefix + key);
+  }
 }
 
 /**
@@ -151,14 +206,15 @@ function describeParsed_(parsed) {
 
 /**
  * @param {ScriptProperties} props
+ * @param {string} prefix
  * @returns {Record<string, SyncedEntry>}
  */
-function loadState_(props) {
+function loadState_(props, prefix) {
   /** @type {Record<string, SyncedEntry>} */
   const state = {};
   for (const [name, value] of Object.entries(props.getProperties())) {
-    if (name.startsWith(STATE_PREFIX))
-      state[name.slice(STATE_PREFIX.length)] = JSON.parse(value);
+    if (name.startsWith(prefix))
+      state[name.slice(prefix.length)] = JSON.parse(value);
   }
   return state;
 }
