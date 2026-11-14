@@ -116,13 +116,25 @@ test('a class description states the space in words and links its row', () => {
 
   const event = world.events(CLASSES).find((e) => e.title === 'Just Try It · 18');
   const sections = event.description.split('\n\n');
-  assert.equal(sections[0], 'Space taken: 18 wheels');
-  assert.equal(sections[1], `Original row (Thu, Oct 8):\n${URL_BASE}&range=A4:H4`);
-  assert.equal(sections[2], '─'.repeat(19));
+  assert.equal(sections[0], 'Space taken:\nWheels: 18');
+  assert.equal(sections[1], '─'.repeat(19), 'a rule between the space block and the rest');
+  assert.equal(sections[2], `Original row (Thu, Oct 8):\n${URL_BASE}&range=A4:H4`);
+  assert.equal(sections[3], '─'.repeat(19));
   assert.match(sections.at(-1), /Check the original row before relying on an event\.$/);
 
   const mix = world.events(CLASSES).find((e) => e.title.includes('Mug & Bowl'));
-  assert.equal(mix.description.split('\n\n')[0], 'Space taken: 9 wheels; 9 seats + tools');
+  assert.equal(mix.description.split('\n\n')[0], 'Space taken:\nWheels: 9\nHand-building: 9 seats + tools');
+});
+
+test('a class that takes no space has no space block or extra rule', () => {
+  const world = newWorld();
+  world.tabs[EVENTS_TAB][3] = eventsRow({ date: 'Thu, Oct 8', start: '7:00 PM', end: '10:00 PM', event: 'Open Studio' });
+
+  world.fn.sync();
+
+  const event = world.events(CLASSES).find((e) => e.title === 'Open Studio');
+  assert.ok(event.description.startsWith('Original row (Thu, Oct 8):'));
+  assert.ok(!event.description.includes('Space taken'));
 });
 
 test('a closure description quotes the original text', () => {

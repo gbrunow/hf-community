@@ -307,7 +307,7 @@ function createDayEvents_(calendar, payload, result) {
     const space = spaceLabel_(event.wheels, event.handBuilding);
     const description = eventDescription_(
       calendar,
-      [space?.detail, original].filter(Boolean).join('\n\n'),
+      (space ? [space.detail, RULE, original] : [original]).join('\n\n'),
       check,
     );
     const options = { description, location: payload.studio.location };
