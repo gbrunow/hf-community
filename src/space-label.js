@@ -1,38 +1,22 @@
 /**
- * How much of the studio an event takes, for the front of its title and the top of its
- * description. W is wheels, HB hand-building, G the glaze area. Wheels plus another area
- * name the area without a count, which in the sheet always matches the wheels.
+ * How many people an event has room for, for the front of its title, and the words for the
+ * top of its description. A class takes the same number of wheels, seats or glaze-area
+ * places for each person, so the title shows just that number.
  *
  * @param {string} wheels the "# of Wheels" cell as written
  * @param {string} handBuilding the "Hand-building" cell as written
- * @returns {{ label: string, detail: string } | null} null when the event takes no space
+ * @returns {{ label: string, detail: string } | null} null when the event takes no space; the
+ *   label is empty when the cells give no number ("all of HB")
  */
 function spaceLabel_(wheels, handBuilding) {
   const w = wheels.trim();
   const h = handBuilding.trim();
   if (!w && !h) return null;
 
-  const found = /\d+/.exec(w)?.[0];
   // A 0 in the wheels column means the class takes none.
-  const number = Number(found) > 0 ? found : undefined;
-  const area = !h ? null : /glaze/i.test(h) ? 'G' : 'HB';
-  let label = null;
-  if (/glaze/i.test(w)) {
-    // "15 people, mostly glaze area": a headcount in the glaze area, not wheels.
-    label = number ? `${number} G` : 'G';
-  } else if (number) {
-    label = `${number} W` + (area ? ` + ${area}` : '');
-  } else if (area === 'G') {
-    label = /^all\b/i.test(h) ? 'all G' : 'G';
-  } else if (area === 'HB') {
-    const seats = /(\d+)\s*seats/i.exec(h)?.[1];
-    label = seats
-      ? `${seats} HB`
-      : /^all of (hb|hand-?building)\b/i.test(h)
-        ? 'all HB'
-        : 'HB';
-  }
-  if (!label) return null;
+  const wheelCount = /\d+/.exec(w)?.[0];
+  const seatCount = /(\d+)\s*seats/i.exec(h)?.[1];
+  const label = [wheelCount, seatCount].find((count) => Number(count) > 0) ?? '';
 
   const parts = [];
   if (w) parts.push(/^\d+$/.test(w) ? `${w} wheels` : w);

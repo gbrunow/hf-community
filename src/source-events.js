@@ -279,11 +279,11 @@ function afterOpening_(time) {
 
 /**
  * @param {DayEvent} event
- * @returns {string} the title with its space label in front, e.g. "18 W · Just Try It"
+ * @returns {string} the title with the number of people in front, e.g. "18 · Just Try It"
  */
 function eventTitle_(event) {
   const space = spaceLabel_(event.wheels, event.handBuilding);
-  return space ? `${space.label} · ${event.title}` : event.title;
+  return space?.label ? `${space.label} · ${event.title}` : event.title;
 }
 
 /**

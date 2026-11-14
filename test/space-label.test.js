@@ -7,40 +7,29 @@ const space = (wheels, handBuilding = '') =>
   JSON.parse(JSON.stringify(world.fn.spaceLabel_(wheels, handBuilding)));
 const label = (wheels, handBuilding) => space(wheels, handBuilding)?.label ?? null;
 
-test('wheels alone give a count', () => {
-  assert.equal(label('18', ''), '18 W');
-  assert.equal(label('4', ''), '4 W');
-  assert.equal(label(' 12 ', ''), '12 W');
+test('the label is just the number of people', () => {
+  assert.equal(label('18', ''), '18');
+  assert.equal(label(' 12 ', ''), '12');
+  assert.equal(label('', '8 seats plus tools'), '8');
+  assert.equal(label('', '12 seats Hand-building'), '12');
+  assert.equal(label('15 people, mostly glaze area', ''), '15');
 });
 
-test('hand-building alone keeps its count or says all', () => {
-  assert.equal(label('', '8 seats plus tools'), '8 HB');
-  assert.equal(label('', '9 seats + tools'), '9 HB');
-  assert.equal(label('', '12 seats Hand-building'), '12 HB');
-  assert.equal(label('', 'all of HB'), 'all HB');
-  assert.equal(label('', 'all of HB (2nd hour only)'), 'all HB');
-  assert.equal(label('', 'Hand-building'), 'HB');
-  assert.equal(label('', 'all but low tables near door'), 'HB');
+test('wheels and seats together show the number once', () => {
+  assert.equal(label('9', '9 seats + tools'), '9');
+  assert.equal(label('10', 'all but the low tables near the front'), '10');
+  assert.equal(label('18', 'all of glaze area'), '18');
+  assert.equal(label('10 (2-3pm)', 'all of HB 2:30-4pm'), '10');
 });
 
-test('wheels plus another area name the area without a count', () => {
-  assert.equal(label('9', '9 seats + tools'), '9 W + HB');
-  assert.equal(label('10', 'all but the low tables near the front'), '10 W + HB');
-  assert.equal(label('13', 'all of HB'), '13 W + HB');
-  assert.equal(label('18', 'all of glaze area'), '18 W + G');
+test('without a number there is no label, but the event still takes space', () => {
+  assert.equal(label('', 'all of HB'), '');
+  assert.equal(label('', 'all of glaze area'), '');
+  assert.equal(label('', 'Hand-building'), '');
+  assert.equal(label('', 'all but low tables near door'), '');
 });
 
-test('the glaze area on its own, and a glaze headcount in the wheels cell', () => {
-  assert.equal(label('', 'all of glaze area'), 'all G');
-  assert.equal(label('', 'glaze area'), 'G');
-  assert.equal(label('15 people, mostly glaze area', ''), '15 G');
-});
-
-test('a note inside the wheels cell does not change the count', () => {
-  assert.equal(label('10 (2-3pm)', 'all of HB 2:30-4pm'), '10 W + HB');
-});
-
-test('an event that takes no space has no label', () => {
+test('an event that takes no space has nothing at all', () => {
   assert.equal(space('', ''), null);
   assert.equal(space('  ', ' '), null);
 });
@@ -60,8 +49,8 @@ test('the detail repeats the cells as written', () => {
 });
 
 test('a zero in the wheels cell means no wheels', () => {
-  assert.equal(label('0', ''), null);
-  assert.equal(label('0', '8 seats plus tools'), '8 HB');
-  assert.equal(label('0', 'all of HB'), 'all HB');
+  assert.equal(label('0', ''), '');
+  assert.equal(label('0', '8 seats plus tools'), '8');
+  assert.equal(label('0', 'all of HB'), '');
   assert.equal(space('0', '8 seats plus tools').detail, 'Space taken: 0 wheels; 8 seats plus tools');
 });
