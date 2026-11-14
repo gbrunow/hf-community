@@ -50,13 +50,19 @@ function previewAll() {
 }
 
 function sync() {
+  withLock_('sync', syncNow_);
+}
+
+function syncNow_() {
   reconcileTrigger_();
   run_({ dryRun: false, pastDays: CONFIG.WINDOW_PAST_DAYS });
 }
 
 function forceSync() {
-  reset();
-  sync();
+  withLock_('forceSync', () => {
+    resetAll_();
+    syncNow_();
+  });
 }
 
 function installTrigger() {
@@ -122,6 +128,10 @@ function syncMaxDaysAhead_() {
  * rebuilds from scratch. Use after renaming calendars or changing how events look.
  */
 function reset() {
+  withLock_('reset', resetAll_);
+}
+
+function resetAll_() {
   const props = PropertiesService.getScriptProperties();
   const events = sources_().reduce((sum, source) => sum + clearSource_(source, props), 0);
   console.log(`Reset: deleted ${events} event(s). Run sync() to rebuild.`);
@@ -134,6 +144,11 @@ function reset() {
  * @param {string} name a source's name, such as "kiln", "discard", "classes" or "closures"
  */
 function resetSource(name) {
+  withLock_('resetSource', () => resetOne_(name));
+}
+
+/** @param {string} name */
+function resetOne_(name) {
   const source = sources_().find((s) => s.name === name);
   if (!source) {
     throw new Error(
@@ -142,6 +157,31 @@ function resetSource(name) {
   }
   const events = clearSource_(source, PropertiesService.getScriptProperties());
   console.log(`Reset ${name}: deleted ${events} event(s). Run sync() to rebuild.`);
+}
+
+/**
+ * Like resetSource("classes"), and also deletes the events on the classes calendars that no
+ * state entry points to, such as the copies two overlapping runs once created. Those
+ * calendars hold nothing but class sessions, so every event on them can go.
+ */
+function purgeClasses() {
+  withLock_('purgeClasses', () => {
+    const props = PropertiesService.getScriptProperties();
+    const classes = sources_().find((source) => source.name === 'classes');
+    let events = classes ? clearSource_(classes, props) : 0;
+    const today = startOfDay_(new Date());
+    for (const studio of CONFIG.STUDIOS) {
+      const calendar = studio.classesCalendarName
+        ? CalendarApp.getCalendarsByName(studio.classesCalendarName)[0]
+        : undefined;
+      if (!calendar) continue;
+      for (const event of calendar.getEvents(addDays_(today, -60), addDays_(today, 400))) {
+        event.deleteEvent();
+        events++;
+      }
+    }
+    console.log(`Purged the classes: deleted ${events} event(s). Run sync() to rebuild.`);
+  });
 }
 
 /**

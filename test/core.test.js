@@ -233,3 +233,57 @@ test("a source's own request size caps how many of its items go to parse at once
   assert.deepEqual(sizes, [4, 4, 2]);
   assert.equal(fakeTitles(world).length, 10);
 });
+
+test('a sync holds the script lock while it writes, and releases it after', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  const heldDuringParse = [];
+  const parse = world.gemini.parse;
+  world.gemini.parse = (note) => {
+    heldDuringParse.push(world.lock.held);
+    return parse(note);
+  };
+
+  world.fn.sync();
+
+  assert.ok(heldDuringParse.length > 0 && heldDuringParse.every(Boolean));
+  assert.equal(world.lock.held, false);
+  assert.deepEqual(world.lockWaits, [30000]);
+});
+
+test('the lock is released even when the run fails', () => {
+  const world = createWorld({ tabs: { 'Renamed tab': kilnRows() } });
+
+  assert.throws(() => world.fn.sync(), /No tab named/);
+
+  assert.equal(world.lock.held, false);
+});
+
+test('a run that finds another one in progress skips itself instead of writing twice', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  world.fn.sync();
+  const events = world.allEvents().length;
+  world.lock.blocked = true;
+  world.setCell(TAB, 6, 2, 'Bisque fired');
+
+  world.fn.sync();
+  world.fn.reset();
+  world.fn.resetSource('kiln');
+  world.fn.forceSync();
+
+  assert.equal(world.allEvents().length, events, 'nothing was written or deleted');
+  assert.equal(world.requests.length, 1, 'nothing was sent to Gemini');
+  assert.equal(
+    world.logs.filter((l) => /another run is in progress; skipped/.test(l.text)).length,
+    4,
+  );
+});
+
+test('forceSync takes the lock once, since the lock is not reentrant', () => {
+  const world = createWorld({ tabs: { [TAB]: kilnRows() } });
+  world.fn.sync();
+
+  world.fn.forceSync();
+
+  assert.equal(world.allEvents().length, 12);
+  assert.equal(world.requests.length, 2);
+});

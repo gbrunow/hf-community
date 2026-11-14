@@ -35,6 +35,8 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
     logs: [],
     requests: [],
     sleeps: [],
+    lock: { held: false, blocked: false },
+    lockWaits: [],
     triggers: [],
     gemini: {
       failCode: null,
@@ -81,6 +83,20 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY } = {}) {
       sleep: (ms) => world.sleeps.push(ms),
     },
     ScriptApp: scriptApp(world),
+    LockService: {
+      getScriptLock: () => ({
+        // Not reentrant, like the real one, so a function that locks inside a locked one fails.
+        tryLock: (ms) => {
+          world.lockWaits.push(ms);
+          if (world.lock.blocked || world.lock.held) return false;
+          world.lock.held = true;
+          return true;
+        },
+        releaseLock: () => {
+          world.lock.held = false;
+        },
+      }),
+    },
   };
 
   world.context = vm.createContext(globals);
@@ -151,6 +167,10 @@ function calendarApp(world) {
         addEvent(events, { title, start, end, allDay: false, ...options }),
       getEventById: (id) =>
         events[id] ? { deleteEvent: () => delete events[id] } : null,
+      getEvents: () =>
+        Object.values(events).map((record) => ({
+          deleteEvent: () => delete events[record.id],
+        })),
     };
     world.calendars[name] = calendar;
     return calendar;

@@ -1,4 +1,27 @@
 /**
+ * Runs fn holding the script lock, so two runs never write at once: both would read
+ * "nothing synced yet" and create every event twice. Skips with a warning when another run
+ * still holds the lock after the wait.
+ *
+ * @template T
+ * @param {string} name for the warning
+ * @param {() => T} fn
+ * @returns {T | undefined}
+ */
+function withLock_(name, fn) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(CONFIG.LOCK_WAIT_MS)) {
+    console.warn(`${name}: another run is in progress; skipped.`);
+    return undefined;
+  }
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
  * @param {string} name
  * @returns {string}
  */

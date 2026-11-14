@@ -51,6 +51,8 @@ const CONFIG = {
   // Apps Script kills a run at 6 minutes. Past this, no new Gemini request or event
   // creation starts; what's left is picked up by the next run.
   RUN_TIME_BUDGET_MS: 4 * 60 * 1000,
+  // How long a run waits for another to finish before skipping itself.
+  LOCK_WAIT_MS: 30 * 1000,
   // Closures and workshops are planned months out; class sessions change more, so fewer.
   EVENTS_LOOKAHEAD_DAYS: 180,
   CLASSES_LOOKAHEAD_DAYS: 60,
