@@ -19,7 +19,7 @@ test('first sync creates every event in one Gemini request', () => {
 
   assert.equal(world.requests.length, 1);
   assert.equal(world.requests[0].notes.length, 9);
-  assert.match(world.requests[0].url, /models\/gemini-3\.5-flash-lite:generateContent/);
+  assert.match(world.requests[0].url, /models\/gemini-flash-lite-latest:generateContent/);
   assert.equal(world.requests[0].generationConfig.thinkingConfig.thinkingLevel, 'low');
   assert.deepEqual(titles(world.events(DT)), [
     'Reduction firing',

@@ -12,7 +12,7 @@
  *   1. Project Settings → Script properties → add SOURCE_SPREADSHEET_ID (the long id in
  *      the source sheet's URL) and GEMINI_API_KEY. Kept out of the code so pasting in a
  *      new version doesn't wipe them. Optional overrides:
- *        GEMINI_MODEL           replaces CONFIG.DEFAULT_GEMINI_MODEL when Google retires a model.
+ *        GEMINI_MODEL           replaces CONFIG.DEFAULT_GEMINI_MODEL, e.g. to pin one model.
  *        SYNC_INTERVAL_MINUTES  replaces CONFIG.DEFAULT_SYNC_INTERVAL_MINUTES; sync() picks
  *                               up a change on its next run.
  *        SYNC_MAX_DAYS_AHEAD    replaces CONFIG.DEFAULT_SYNC_MAX_DAYS_AHEAD.
