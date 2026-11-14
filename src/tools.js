@@ -188,3 +188,20 @@ function tryParse(iso, text) {
   const [parsed] = parseNotes_([cell], geminiModel_(true));
   return parsed ? describeParsed_(parsed) : '(no result)';
 }
+
+/**
+ * The events-tab rows the script reads for a day, before Gemini sees them. Run it with
+ * `npm run fn -- eventsTabRows -p '["2026-12-12"]'`.
+ *
+ * @param {string} iso YYYY-MM-DD
+ * @returns {string[]}
+ */
+function eventsTabRows(iso) {
+  const date = parseIsoDate_(iso);
+  const window = { today: startOfDay_(new Date()), windowStart: date, windowEnd: date };
+  return CONFIG.STUDIOS.filter((s) => s.enabled && s.eventsTab).flatMap((studio) =>
+    readEventsTab_(studio, window).records.map(
+      (record) => `${record.kind} row ${record.rowNumber}: ${JSON.stringify(record.fields)}`,
+    ),
+  );
+}
