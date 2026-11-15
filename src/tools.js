@@ -304,3 +304,18 @@ function findUntrackedEvents() {
   const manual = scan.manual.length ? `, ${scan.manual.length} made by hand and left alone` : '';
   return lines.length ? lines : [`Every one of ${scan.tracked} events the script made is tracked${manual}.`];
 }
+
+/**
+ * Lists the hand-made events the script sees in the sync window, with the description each
+ * has now. Read-only. Run it with `npm run fn -- handMadeEvents`.
+ *
+ * @returns {string[]}
+ */
+function handMadeEvents() {
+  const { manual } = scanCalendars_();
+  if (!manual.length) return ['No hand-made events in the sync window.'];
+  return manual.map(
+    ({ calendarName, event }) =>
+      `${calendarName} | ${isoDate_(new Date(event.getStartTime().getTime()))} | ${event.getTitle()} | created ${event.getDateCreated().toISOString()}, last changed ${event.getLastUpdated().toISOString()}\n${event.getDescription() || '(no description)'}`,
+  );
+}
