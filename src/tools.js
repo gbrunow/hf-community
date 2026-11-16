@@ -143,13 +143,14 @@ function inspectEventColors() {
 
 /**
  * Lists the events on each enabled studio's calendars (main and classes) for a day, with
- * the note each came from.
- * Run it with `npm run fn -- eventsOn -p '["2026-11-15"]'`.
+ * the note each came from, or the whole description with `full`.
+ * Run it with `npm run fn -- eventsOn -p '["2026-11-15"]'` (or `["2026-11-15",true]`).
  *
  * @param {string} iso YYYY-MM-DD
+ * @param {boolean} [full] show each event's whole description
  * @returns {string[]}
  */
-function eventsOn(iso) {
+function eventsOn(iso, full = false) {
   const day = parseIsoDate_(iso);
   const lines = [];
   const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
@@ -163,7 +164,8 @@ function eventsOn(iso) {
       const when = event.isAllDayEvent()
         ? 'all day'
         : `${event.getStartTime().toTimeString().slice(0, 5)}-${event.getEndTime().toTimeString().slice(0, 5)}`;
-      const note = event.getDescription().split('\n\n').slice(0, 2).join(' ');
+      const description = event.getDescription();
+      const note = full ? description : description.split('\n\n').slice(0, 2).join(' ');
       lines.push(`  ${when.padEnd(11)} ${event.getTitle()}  <- ${note}`);
     }
   }
