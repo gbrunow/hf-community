@@ -32,7 +32,7 @@ Provided as is, without warranty. Events may be late, wrong or missing; check th
 
 ## Development
 
-The script lives in `src/`: setup steps are at the top of `src/main.js`, settings in `src/config.js`. [clasp](https://github.com/google/clasp) deploys it:
+The script lives in `src/`: setup steps are at the top of `src/main.js`, settings in `src/config.js`, and everything an event says (wording, layout, links, titles) in `src/content.js`. [clasp](https://github.com/google/clasp) deploys it:
 
     npm install
     npx clasp login
