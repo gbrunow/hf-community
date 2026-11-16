@@ -51,7 +51,8 @@ order. Each event has:
   else as written.
 - "start" and "end": HH:MM, 24-hour. Class times fall within studio hours, 09:00-21:59, so a
   time written before 9 AM (such as "3:00 AM") is a typo for the same hour in the afternoon.
-  Use "" for both when the row has no usable start and end.
+  A row with only a start gives that time and "" for "end"; use "" for both when the row has
+  no usable start.
 - "wheels": the "# of Wheels" cell copied exactly as written; "" when the row has none.
 - "handBuilding": the "Hand-building" cell copied exactly as written; "" when the row has
   none.
@@ -73,9 +74,10 @@ those cells. Reply with {"results": [...]} holding exactly one result per day, w
   Memorial Day", "Studio closing at 4pm for workshop set up", "Extruder 1 with Sam Rivera").
   Fix obvious typos and use sentence case. Never add information.
 - "start" and "end": HH:MM, 24-hour. A workshop or event with a start and an end time gives
-  both ("10am-1pm" is 10:00 to 13:00). A closure that begins at a time ("closed at 3:30",
-  "closing at 4pm") gives that time as "start" and "" for "end"; it lasts to the end of the
-  day. Use "" for both for anything else. An hour without am/pm falls within studio hours,
+  both ("10am-1pm" is 10:00 to 13:00). Give only the time a row states and "" for the other:
+  a closure that begins at a time ("closed at 3:30", "closing at 4pm") gives it as "start";
+  one that lasts until a time ("closed until 6pm", "re-opens at 6pm") gives it as "end", with
+  "" for "start". Use "" for both for anything else. An hour without am/pm falls within studio hours,
   09:00-21:59, so "3:30" is 15:30.
 - "wheels": the number of wheels, copied exactly as written, when the announcement gives
   one; otherwise "".
@@ -90,7 +92,9 @@ Examples, day → result:
 {"id":1,"date":"2026-01-10","weekday":"Sat","rows":[{"Side table":"Sat, Jan 10 | 10am-1pm | Extruder 1 with Sam Rivera | Hand-building"}]}
 → {"id":1,"events":[{"title":"Extruder 1 with Sam Rivera","start":"10:00","end":"13:00","wheels":"","handBuilding":"Hand-building"}]}
 {"id":2,"date":"2026-11-25","weekday":"Wed","rows":[{"Start":"CLOSED AT 3:30 FOR THANKSGIVING"}]}
-→ {"id":2,"events":[{"title":"Closed at 3:30 for Thanksgiving","start":"15:30","end":"","wheels":"","handBuilding":""}]}`;
+→ {"id":2,"events":[{"title":"Closed at 3:30 for Thanksgiving","start":"15:30","end":"","wheels":"","handBuilding":""}]}
+{"id":3,"date":"2026-12-24","weekday":"Thu","rows":[{"Start":"CLOSED UNTIL 6PM FOR A PRIVATE EVENT"}]}
+→ {"id":3,"events":[{"title":"Closed until 6pm for a private event","start":"","end":"18:00","wheels":"","handBuilding":""}]}`;
 
 /** @returns {Source<EventsPayload, EventsResult>} */
 function classesSource_() {
@@ -244,9 +248,7 @@ function validateDayEvents_(raw, payload) {
   for (const event of raw) {
     const title = cleanCell_(event.title);
     if (!title) continue;
-    let { start, end } = event;
-    // A closure that begins at a time lasts until the day is over.
-    if (payload.kind === 'closures' && start && !end && CLOCK_TIME.test(start)) end = END_OF_DAY;
+    let { start, end } = completeTimes_(payload.kind, title, event.start, event.end);
     if (start || end) {
       const valid = start && end && CLOCK_TIME.test(start) && CLOCK_TIME.test(end);
       if (valid && payload.kind === 'classes') {
@@ -273,6 +275,43 @@ const CLOCK_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Where a closure that begins at a time ends. */
 const END_OF_DAY = '23:59';
+
+/** Where a closure that lasts until a time begins. */
+const START_OF_DAY = '00:00';
+
+/**
+ * Fills in the missing half of a time range that gives only one end. A closure is a state
+ * that persists: one that begins at a time lasts to the end of the day, and one that lasts
+ * until a time begins with the day. Anything else (a class or workshop) has a length: its
+ * start plus CONFIG.CLASS_MINUTES, or SHORT_CLASS_MINUTES for the classes matching
+ * SHORT_CLASS_PATTERN. A range that can't be completed is returned as it came, to be made
+ * all-day.
+ *
+ * @param {EventsPayload['kind']} kind
+ * @param {string} title
+ * @param {string | undefined} start HH:MM
+ * @param {string | undefined} end HH:MM
+ * @returns {{ start: string | undefined, end: string | undefined }}
+ */
+function completeTimes_(kind, title, start, end) {
+  const startOnly = !!start && !end && CLOCK_TIME.test(start);
+  const endOnly = !!end && !start && CLOCK_TIME.test(end);
+  if (kind === 'closures' && styleOf_(title)?.closure) {
+    if (startOnly) return { start, end: END_OF_DAY };
+    if (endOnly) return { start: START_OF_DAY, end };
+  } else if (startOnly) {
+    const from = kind === 'classes' ? afterOpening_(start) : start;
+    const minutes = CONFIG.SHORT_CLASS_PATTERN.test(title)
+      ? CONFIG.SHORT_CLASS_MINUTES
+      : CONFIG.CLASS_MINUTES;
+    const total = Number(from.slice(0, 2)) * 60 + Number(from.slice(3)) + minutes;
+    if (total < 24 * 60) {
+      const clock = (/** @type {number} */ n) => String(n).padStart(2, '0');
+      return { start: from, end: `${clock(Math.floor(total / 60))}:${clock(total % 60)}` };
+    }
+  }
+  return { start, end };
+}
 
 /**
  * The studio opens at 9, so an earlier class time (a typo like "3:00 AM") is the same hour

@@ -38,6 +38,11 @@ const CONFIG = {
   WINDOW_PAST_DAYS: 14,
   DEFAULT_SYNC_MAX_DAYS_AHEAD: 14, // Overridden by the SYNC_MAX_DAYS_AHEAD script property.
   TIMED_EVENT_MINUTES: 30,
+  // A class or workshop whose row gives a start and no end runs this long; the classes
+  // matching SHORT_CLASS_PATTERN (the single-session ones) run the shorter time.
+  CLASS_MINUTES: 180,
+  SHORT_CLASS_MINUTES: 120,
+  SHORT_CLASS_PATTERN: /take a spin|let's roll|mug & bowl|wheel package|demo days/i,
   DEFAULT_SYNC_INTERVAL_MINUTES: 60, // Overridden by the SYNC_INTERVAL_MINUTES script property.
   // The Flash-Lite family's latest model: Google moves the alias as models are retired, so
   // the sync keeps working. Overridden by the GEMINI_MODEL script property.
@@ -75,6 +80,7 @@ const CONFIG = {
       pattern: /\bclos(ed|es|ing|ure)\b/i,
       colorId: eventColor.radicchio,
       emoji: '🔴',
+      closure: true,
     },
     {
       name: 'Unloading',

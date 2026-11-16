@@ -21,6 +21,8 @@ interface EventStyle {
   /** The legacy event color ID that owns this style's label. */
   colorId?: number;
   emoji?: string;
+  /** The studio is closed: a time on the event bounds the closure instead of giving its length. */
+  closure?: boolean;
 }
 
 /** One studio's note on one day, as read from a row of the kiln tab. */

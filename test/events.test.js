@@ -516,19 +516,84 @@ test('a closure with no time stays all-day, and one with both times keeps them',
   assert.equal(hhmm(workshop.end), '13:00', 'a workshop still ends when it says');
 });
 
-test('only a closure may begin at a time with no end: a class that does is made all-day', () => {
+/** Runs a sync where Gemini's reply for one source is changed by `edit(events)`. */
+function syncWithReply(kind, edit) {
   const world = newWorld();
   const real = world.gemini.parseDays;
-  world.gemini.parseDays = (kind, days) => {
-    const reply = real(kind, days);
-    if (kind === 'classes') reply.results[0].events[0].end = '';
+  world.gemini.parseDays = (k, days) => {
+    const reply = real(k, days);
+    if (k === kind) for (const result of reply.results) edit(result.events);
     return reply;
   };
-
   world.fn.sync();
+  return world;
+}
+
+test('a class with a start and no end runs three hours, or two for a short class', () => {
+  const world = syncWithReply('classes', (events) => {
+    events[0] = { ...events[0], title: 'Just Try It', start: '14:00', end: '' };
+    events.push({ title: 'Take a Spin', start: '14:00', end: '', wheels: '', handBuilding: '' });
+  });
+
+  assert.ok(classes(world).includes('2026-10-08 14:00-17:00 Just Try It · 18'));
+  assert.ok(classes(world).includes('2026-10-08 14:00-16:00 Take a Spin'));
+  assert.equal(warnings(world).filter((w) => /unusable times/.test(w)).length, 0);
+});
+
+test('a class start before opening is read as afternoon before its length is added', () => {
+  const world = syncWithReply('classes', (events) => {
+    events[0] = { ...events[0], start: '08:00', end: '' };
+  });
+
+  assert.ok(classes(world).includes('2026-10-08 20:00-23:00 Just Try It · 18'));
+});
+
+test('a class that would run past midnight is made all-day', () => {
+  const world = syncWithReply('classes', (events) => {
+    events[0] = { ...events[0], start: '22:00', end: '' };
+  });
 
   assert.ok(classes(world).includes('2026-10-08 all day Just Try It · 18'));
   assert.ok(warnings(world).some((w) => /Just Try It" has unusable times/.test(w)));
+});
+
+test('a class with an end and no start is made all-day', () => {
+  const world = syncWithReply('classes', (events) => {
+    events[0] = { ...events[0], start: '', end: '17:00' };
+  });
+
+  assert.ok(classes(world).includes('2026-10-08 all day Just Try It · 18'));
+});
+
+test('a workshop with a start and no end runs the length of a class', () => {
+  const world = syncWithReply('closures', (events) => {
+    const workshop = events.find((e) => e.title.includes('Extruder 1'));
+    if (workshop) workshop.end = '';
+  });
+
+  const workshop = world.events(DT).find((e) => e.title.includes('Extruder 1'));
+  assert.equal(hhmm(workshop.start), '10:00');
+  assert.equal(hhmm(workshop.end), '13:00');
+});
+
+test('a closure that lasts until a time runs from the start of the day to then', () => {
+  const world = syncWithReply('closures', (events) => {
+    events[0] = { title: 'Closed until 6pm for a private event', start: '', end: '18:00', wheels: '', handBuilding: '' };
+  });
+
+  const closure = world.events(DT).find((e) => e.title.includes('Closed until 6pm'));
+  assert.equal(closure.allDay, false);
+  assert.equal(hhmm(closure.start), '00:00');
+  assert.equal(hhmm(closure.end), '18:00');
+  assert.ok(closure.title.startsWith('🔴 '));
+});
+
+test('an announcement that is not a closure and gives only an end is made all-day', () => {
+  const world = syncWithReply('closures', (events) => {
+    events[0] = { title: 'Open house', start: '', end: '18:00', wheels: '', handBuilding: '' };
+  });
+
+  assert.ok(world.events(DT).some((e) => e.title.includes('Open house') && e.allDay));
 });
 
 test('a closure that begins at a time too late to end the same day falls back to all-day', () => {
