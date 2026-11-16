@@ -72,9 +72,11 @@ those cells. Reply with {"results": [...]} holding exactly one result per day, w
 - "title": the announcement as a short title that keeps what and when ("Studio closed for
   Memorial Day", "Studio closing at 4pm for workshop set up", "Extruder 1 with Sam Rivera").
   Fix obvious typos and use sentence case. Never add information.
-- "start" and "end": HH:MM, 24-hour, only for a workshop or event that has both a start and
-  an end time ("10am-1pm" is 10:00 to 13:00). Use "" for both for closures and for anything
-  else. An hour without am/pm falls within studio hours, 09:00-21:59.
+- "start" and "end": HH:MM, 24-hour. A workshop or event with a start and an end time gives
+  both ("10am-1pm" is 10:00 to 13:00). A closure that begins at a time ("closed at 3:30",
+  "closing at 4pm") gives that time as "start" and "" for "end"; it lasts to the end of the
+  day. Use "" for both for anything else. An hour without am/pm falls within studio hours,
+  09:00-21:59, so "3:30" is 15:30.
 - "wheels": the number of wheels, copied exactly as written, when the announcement gives
   one; otherwise "".
 - "handBuilding": the hand-building area, copied exactly as written (such as
@@ -86,7 +88,9 @@ Examples, day → result:
 {"id":0,"date":"2026-05-25","weekday":"Mon","rows":[{"Start":"STUDIO CLOSED FOR MEMORIAL DAY"}]}
 → {"id":0,"events":[{"title":"Studio closed for Memorial Day","start":"","end":"","wheels":"","handBuilding":""}]}
 {"id":1,"date":"2026-01-10","weekday":"Sat","rows":[{"Side table":"Sat, Jan 10 | 10am-1pm | Extruder 1 with Sam Rivera | Hand-building"}]}
-→ {"id":1,"events":[{"title":"Extruder 1 with Sam Rivera","start":"10:00","end":"13:00","wheels":"","handBuilding":"Hand-building"}]}`;
+→ {"id":1,"events":[{"title":"Extruder 1 with Sam Rivera","start":"10:00","end":"13:00","wheels":"","handBuilding":"Hand-building"}]}
+{"id":2,"date":"2026-11-25","weekday":"Wed","rows":[{"Start":"CLOSED AT 3:30 FOR THANKSGIVING"}]}
+→ {"id":2,"events":[{"title":"Closed at 3:30 for Thanksgiving","start":"15:30","end":"","wheels":"","handBuilding":""}]}`;
 
 /** @returns {Source<EventsPayload, EventsResult>} */
 function classesSource_() {
@@ -241,6 +245,8 @@ function validateDayEvents_(raw, payload) {
     const title = cleanCell_(event.title);
     if (!title) continue;
     let { start, end } = event;
+    // A closure that begins at a time lasts until the day is over.
+    if (payload.kind === 'closures' && start && !end && CLOCK_TIME.test(start)) end = END_OF_DAY;
     if (start || end) {
       const valid = start && end && CLOCK_TIME.test(start) && CLOCK_TIME.test(end);
       if (valid && payload.kind === 'classes') {
@@ -264,6 +270,9 @@ function validateDayEvents_(raw, payload) {
 }
 
 const CLOCK_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Where a closure that begins at a time ends. */
+const END_OF_DAY = '23:59';
 
 /**
  * The studio opens at 9, so an earlier class time (a typo like "3:00 AM") is the same hour

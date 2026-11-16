@@ -489,3 +489,58 @@ test('pauseTrigger stops the schedule and installTrigger resumes it', () => {
   world.fn.installTrigger();
   assert.equal(world.triggers.length, 1);
 });
+
+test('a closure that begins at a time runs from then to the end of the day', () => {
+  const world = newWorld();
+  world.tabs[EVENTS_TAB].push(eventsRow({ date: 'Wed, Nov 25', start: 'CLOSED AT 3:30 FOR THANKSGIVING' }));
+
+  world.fn.sync();
+
+  const closure = world.events(DT).find((e) => e.title.includes('CLOSED AT 3:30'));
+  assert.equal(closure.allDay, false);
+  assert.equal(world.fn.isoDate_(closure.start), '2026-11-25');
+  assert.equal(hhmm(closure.start), '15:30');
+  assert.equal(hhmm(closure.end), '23:59');
+  assert.equal(world.fn.isoDate_(closure.end), '2026-11-25', 'the same day');
+  assert.ok(closure.title.startsWith('🔴 '), 'still styled as a closure');
+});
+
+test('a closure with no time stays all-day, and one with both times keeps them', () => {
+  const world = newWorld();
+  world.fn.sync();
+
+  const holiday = world.events(DT).find((e) => e.title.includes('FOR THE HOLIDAY'));
+  assert.equal(holiday.allDay, true);
+  const workshop = world.events(DT).find((e) => e.title.includes('Extruder 1'));
+  assert.equal(hhmm(workshop.start), '10:00');
+  assert.equal(hhmm(workshop.end), '13:00', 'a workshop still ends when it says');
+});
+
+test('only a closure may begin at a time with no end: a class that does is made all-day', () => {
+  const world = newWorld();
+  const real = world.gemini.parseDays;
+  world.gemini.parseDays = (kind, days) => {
+    const reply = real(kind, days);
+    if (kind === 'classes') reply.results[0].events[0].end = '';
+    return reply;
+  };
+
+  world.fn.sync();
+
+  assert.ok(classes(world).includes('2026-10-08 all day Just Try It · 18'));
+  assert.ok(warnings(world).some((w) => /Just Try It" has unusable times/.test(w)));
+});
+
+test('a closure that begins at a time too late to end the same day falls back to all-day', () => {
+  const world = newWorld();
+  const real = world.gemini.parseDays;
+  world.gemini.parseDays = (kind, days) => {
+    const reply = real(kind, days);
+    if (kind === 'closures') reply.results[0].events[0] = { title: 'Closed at midnight', start: '23:59', end: '' };
+    return reply;
+  };
+
+  world.fn.sync();
+
+  assert.ok(world.events(DT).some((e) => e.title.includes('Closed at midnight') && e.allDay));
+});

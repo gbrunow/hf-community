@@ -317,7 +317,11 @@ function fakeParseDays(kind, days) {
           handBuilding: area,
         };
       }
-      return { title: Object.values(row).join(' - ') };
+      const text = Object.values(row).join(' - ');
+      const closing = /closed at (\d{1,2}):(\d\d)/i.exec(text);
+      if (!closing) return { title: text };
+      const hour = Number(closing[1]);
+      return { title: text, start: `${String(hour < 9 ? hour + 12 : hour).padStart(2, '0')}:${closing[2]}`, end: '' };
     });
     return { id: day.id, events };
   });
