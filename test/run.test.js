@@ -64,9 +64,9 @@ test("an event's description quotes the note, links its row and shares the calen
     /^"Bisque loading, reduction cooling \(unload by 11am\)"\nhttps:\/\/docs\.google\.com\/spreadsheets\/d\/SHEET\/edit\?gid=1000#gid=1000&range=A7:E7$/,
   );
   assert.equal(sections[2], '─'.repeat(19));
-  assert.equal(sections[3], world.eval('CONFIG.CONTACT'));
+  assert.equal(sections[3], world.eval('CONTENT.contact'));
   assert.match(sections[4], /^Share this calendar:\nwebcal:\/\/calendar\.google\.com\/calendar\/ical\/.+\/public\/basic\.ics$/);
-  assert.equal(sections[6], world.eval('CONFIG.DISCLAIMER'));
+  assert.equal(sections[6], world.eval('CONTENT.disclaimer'));
   assert.match(sections[7], /Check the original note before relying on an event\.$/);
 });
 
@@ -75,7 +75,7 @@ test('the calendar description shares the calendar and links the kiln notes', ()
   world.fn.sync();
 
   const description = world.calendars[DT].description;
-  assert.ok(description.startsWith(world.eval('CONFIG.CONTACT')));
+  assert.ok(description.startsWith(world.eval('CONTENT.contact')));
   assert.match(description, /Share this calendar:\nwebcal:\/\//);
   assert.match(description, /before relying on an event:\nhttps:\/\/docs\.google\.com\/spreadsheets\/d\/SHEET\/edit$/);
 });

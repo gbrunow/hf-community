@@ -283,7 +283,9 @@ function afterOpening_(time) {
  */
 function eventTitle_(event) {
   const space = spaceLabel_(event.wheels, event.handBuilding);
-  return space?.label ? `${event.title} · ${space.label}` : event.title;
+  return space?.label
+    ? render_(CONTENT.titleWithCount, { title: event.title, count: space.label })
+    : event.title;
 }
 
 /**
@@ -294,22 +296,16 @@ function eventTitle_(event) {
  */
 function createDayEvents_(calendar, payload, result) {
   const closures = payload.kind === 'closures';
-  const url = payload.records[0].url;
-  const original = closures
-    ? `Original (${payload.dateLabel}):\n${payload.records
-        .map((record) => `"${Object.values(record.fields).join(' | ')}"`)
-        .join('\n')}\n${url}`
-    : `Original row (${payload.dateLabel}):\n${url}`;
-  const check = closures
-    ? 'Check the original text before relying on an event.'
-    : 'Check the original row before relying on an event.';
+  const values = {
+    dateLabel: payload.dateLabel,
+    rowUrl: payload.records[0].url,
+    rows: payload.records
+      .map((record) => `"${Object.values(record.fields).join(' | ')}"`)
+      .join('\n'),
+  };
   return result.events.map((event) => {
     const space = spaceLabel_(event.wheels, event.handBuilding);
-    const description = eventDescription_(
-      calendar,
-      (space ? [space.detail, RULE, original] : [original]).join('\n\n'),
-      check,
-    );
+    const description = eventDescription_(calendar, payload.kind, values, space?.detail);
     const options = { description, location: payload.studio.location };
     const { style, title } = closures
       ? styledTitle_(eventTitle_(event))

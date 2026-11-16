@@ -162,20 +162,20 @@ test('every event any source makes carries the marker the cleanup relies on', ()
   const events = world.allEvents();
   assert.ok(events.length > 20);
   const marked = (e) =>
-    e.description.includes(world.eval('CONFIG.DISCLAIMER')) &&
-    e.description.includes(world.eval('CONFIG.AI_NOTICE'));
+    e.description.includes(world.eval('CONTENT.disclaimer')) &&
+    e.description.includes(world.eval('CONTENT.aiNotice'));
   assert.deepEqual(events.filter((e) => !marked(e)).map((e) => e.title), []);
 });
 
 const manualEvent = (world, title) => world.allEvents().find((e) => e.title === title);
-const configured = (world, name) => world.eval(`CONFIG.${name}`);
+const configured = (world, name) => world.eval(`CONTENT.${name}`);
 
 test('hand-made events in the sync window get the disclaimers below their own text', () => {
   const world = worldWithManualEvents();
   world.fn.sync();
 
-  const { DISCLAIMER, CONTACT, AI_NOTICE } = Object.fromEntries(
-    ['DISCLAIMER', 'CONTACT', 'AI_NOTICE'].map((name) => [name, configured(world, name)]),
+  const { disclaimer: DISCLAIMER, contact: CONTACT, aiNotice: AI_NOTICE } = Object.fromEntries(
+    ['disclaimer', 'contact', 'aiNotice'].map((name) => [name, configured(world, name)]),
   );
   const dentist = manualEvent(world, 'Dentist (mine)').description;
   assert.ok(dentist.startsWith('my own note\n\n─'), 'their text stays first');
@@ -190,8 +190,8 @@ test('a hand-made event with no text starts with the contact line, not a rule', 
   world.fn.sync();
 
   const bowls = manualEvent(world, 'Pick up my bowls').description;
-  assert.ok(bowls.startsWith(configured(world, 'CONTACT')));
-  assert.ok(bowls.endsWith(configured(world, 'DISCLAIMER')));
+  assert.ok(bowls.startsWith(configured(world, 'contact')));
+  assert.ok(bowls.endsWith(configured(world, 'disclaimer')));
 });
 
 test('hand-made events outside the sync window are left exactly as they are', () => {
@@ -221,7 +221,7 @@ test('an event with guests is skipped, since editing it might email them', () =>
   world.fn.sync();
 
   assert.equal(manualEvent(world, 'Dentist (mine)').description, 'my own note');
-  assert.ok(manualEvent(world, 'Pick up my bowls').description.includes(configured(world, 'DISCLAIMER')));
+  assert.ok(manualEvent(world, 'Pick up my bowls').description.includes(configured(world, 'disclaimer')));
 });
 
 test('the script\'s own events are never taken for hand-made ones, whatever their text says', () => {

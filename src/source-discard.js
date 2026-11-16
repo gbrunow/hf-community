@@ -273,11 +273,10 @@ function nearestOccurrence_(month, day, today) {
  * @returns {string[]}
  */
 function createDiscardEvents_(calendar, tab, result) {
-  const description = eventDescription_(
-    calendar,
-    `Original schedule (${tab.tabName}):\n${tab.tabUrl}`,
-    'Check the original schedule before relying on an event.',
-  );
+  const description = eventDescription_(calendar, 'discard', {
+    tabName: tab.tabName,
+    tabUrl: tab.tabUrl,
+  });
   return result.events.map(({ date, title }) => {
     const styled = styledTitle_(title);
     const event = calendar.createAllDayEvent(styled.title, parseIsoDate_(date), {

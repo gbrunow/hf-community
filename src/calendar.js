@@ -5,11 +5,11 @@
  * @returns {string[]}
  */
 function createEvents_(calendar, cell, parsed) {
-  const description = eventDescription_(
-    calendar,
-    `Original note (${cell.dateLabel}):\n\n"${cell.text}"\n${cell.rowUrl}`,
-    'Check the original note before relying on an event.',
-  );
+  const description = eventDescription_(calendar, 'kiln', {
+    dateLabel: cell.dateLabel,
+    text: cell.text,
+    rowUrl: cell.rowUrl,
+  });
   const options = { description, location: cell.studio.location };
   /** @type {{ style: EventStyle | null, event: CalendarEventHandle }[]} */
   const events = [];
@@ -42,7 +42,10 @@ function createEvents_(calendar, cell, parsed) {
  */
 function styledTitle_(title) {
   const style = styleOf_(title);
-  return { style, title: style?.emoji ? `${style.emoji} ${title}` : title };
+  return {
+    style,
+    title: style?.emoji ? render_(CONTENT.titleWithEmoji, { emoji: style.emoji, title }) : title,
+  };
 }
 
 /**
@@ -73,38 +76,19 @@ function deleteEvents_(entry) {
   }
 }
 
-// The most that fit on one line in Apple Calendar's event details on iPhone.
-const RULE = '─'.repeat(19);
-
 /**
- * An event's description: what it came from, then the contact, disclaimer and AI notice.
+ * An event's description, laid out as CONTENT.layouts.event says.
  *
  * @param {StudioCalendar} calendar
- * @param {string} source what the event came from, with a link to it
- * @param {string} check the sentence telling people where to confirm the event
+ * @param {'kiln' | 'discard' | 'classes' | 'closures'} kind which source the event is from
+ * @param {Record<string, string>} values the placeholders that kind's `source` template uses
+ * @param {string} [space] the space block, when the event takes any
  * @returns {string}
  */
-function eventDescription_(calendar, source, check) {
-  return [source, disclaimers_(calendar), `${CONFIG.AI_NOTICE} ${check}`].join('\n\n');
-}
-
-/**
- * What every event on these calendars says about where it comes from, apart from the AI
- * notice: the contact, the share link and the unofficial-calendar disclaimer.
- *
- * @param {StudioCalendar} calendar
- * @returns {string}
- */
-function disclaimers_(calendar) {
-  return [RULE, shareSection_(calendar), RULE, CONFIG.DISCLAIMER].join('\n\n');
-}
-
-/**
- * @param {StudioCalendar} calendar
- * @returns {string}
- */
-function shareSection_(calendar) {
-  return `${CONFIG.CONTACT}\n\nShare this calendar:\n${subscribeUrl_(calendar)}`;
+function eventDescription_(calendar, kind, values, space = '') {
+  const { source, check } = CONTENT.sources[kind];
+  const all = { ...values, shareUrl: subscribeUrl_(calendar), check };
+  return compose_('event', { ...blocks_(all), source: render_(source, all), space });
 }
 
 /** @type {Record<string, StudioCalendar>} */
@@ -130,12 +114,10 @@ function getCalendar_(name, sheetUrl) {
     const calendar =
       CalendarApp.getCalendarsByName(name)[0] ||
       CalendarApp.createCalendar(name);
-    const description = [
-      shareSection_(calendar),
-      RULE,
-      CONFIG.DISCLAIMER,
-      `${CONFIG.AI_NOTICE} Check the kiln notes before relying on an event:\n${sheetUrl}`,
-    ].join('\n\n');
+    const description = compose_(
+      'calendar',
+      blocks_({ shareUrl: subscribeUrl_(calendar), sheetUrl }),
+    );
     if (calendar.getDescription() !== description)
       calendar.setDescription(description);
     calendarCache_[name] = calendar;
@@ -155,7 +137,7 @@ function getCalendar_(name, sheetUrl) {
  */
 function isScriptEvent_(event) {
   const description = event.getDescription();
-  return description.includes(CONFIG.DISCLAIMER) && description.includes(CONFIG.AI_NOTICE);
+  return description.includes(CONTENT.disclaimer) && description.includes(CONTENT.aiNotice);
 }
 
 /**
@@ -211,16 +193,18 @@ function annotateManualEvents_({ dryRun, outOfTime }) {
   for (const { calendar, event } of scanCalendars_().manual) {
     if (outOfTime()) break;
     const text = event.getDescription();
-    if (text.includes(CONFIG.DISCLAIMER) || event.getGuestList().length) continue;
+    if (text.includes(CONTENT.disclaimer) || event.getGuestList().length) continue;
     changed++;
     console.log(
       `${dryRun ? 'Would add' : 'Adding'} the disclaimers to the hand-made event "${event.getTitle()}".`,
     );
     if (dryRun) continue;
-    const footer = text
-      ? [text, disclaimers_(calendar)]
-      : [shareSection_(calendar), RULE, CONFIG.DISCLAIMER];
-    event.setDescription(footer.join('\n\n'));
+    event.setDescription(
+      compose_('handMade', {
+        ...blocks_({ shareUrl: subscribeUrl_(calendar) }),
+        existing: text,
+      }),
+    );
   }
   return changed;
 }

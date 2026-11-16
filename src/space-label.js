@@ -23,16 +23,20 @@ function spaceLabel_(wheels, handBuilding) {
 
   const lines = [];
   if (glazingInWheels) {
-    if (wheelCount) lines.push(`People: ${wheelCount}`);
+    if (wheelCount) lines.push(render_(CONTENT.space.people, { value: wheelCount }));
   } else if (w && !/^0+$/.test(w)) {
     // A 0 in the wheels column means the class takes none.
-    lines.push(`Wheels: ${w}`);
+    lines.push(render_(CONTENT.space.wheels, { value: w }));
   }
   if (h && !/glaze/i.test(h)) {
-    lines.push(/^hand-?building$/i.test(h) ? 'Hand-building area' : `Hand-building: ${h}`);
+    lines.push(
+      /^hand-?building$/i.test(h)
+        ? CONTENT.space.handBuildingArea
+        : render_(CONTENT.space.handBuilding, { value: h }),
+    );
   }
-  if (glazing) lines.push('Class will be glazing.');
+  if (glazing) lines.push(CONTENT.space.glazing);
   if (!lines.length) return null;
 
-  return { label, detail: ['Space taken:', ...lines].join('\n') };
+  return { label, detail: [CONTENT.space.heading, ...lines].join('\n') };
 }
