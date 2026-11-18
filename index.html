@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Higher Fire Community Calendar</title>
+<meta name="description" content="Higher Fire community calendar with kiln schedule, discard days, and more.">
+<script>document.documentElement.classList.add('js')</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script defer src="https://cloud.umami.is/script.js" data-website-id="d308e14e-3af8-47b5-8421-b3c96235007d" data-domains="gbrunow.github.io"></script>
+<style>
+:root { --cream: #F4EDE0; --cream-2: #EADFCB; --terracotta: #A94A21; --ink: #2E2520; --tab: #FBF7EE; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--cream); color: var(--ink); font-family: 'DM Sans', system-ui, sans-serif; overflow-x: hidden; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* The page, then spare scroll room after it (see "reveal" below). */
+.page { position: sticky; overflow: hidden; padding: 22px 20px 240px; }
+.reveal { display: none; height: 260px; }
+.js .reveal { display: block; }
+
+.eyebrow { font: 500 12px/1 'Jost', sans-serif; letter-spacing: .22em; text-transform: uppercase; color: var(--terracotta); margin: 6px 0 10px; }
+h1 { font: 400 32px/1.08 'Jost', sans-serif; letter-spacing: .02em; text-transform: uppercase; margin: 0 0 34px; }
+h1 b { font-weight: 600; color: var(--terracotta); }
+
+.card { position: relative; color: var(--cream); width: 390px; margin-bottom: 40px; }
+.card > svg.shape { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; overflow: visible; }
+.card > :not(svg) { position: relative; z-index: 1; }
+.shape-w { display: none; }
+.card h2 { font: 500 24px/1.1 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px; }
+.card p { margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
+.kiln { margin-left: -80px; padding: 46px 46px 46px 100px; }
+.classes { margin-left: 24px; padding: 46px 94px 46px 34px; }
+
+.btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; font: 600 15px/1 'DM Sans', sans-serif; color: var(--cream); background: rgba(46,37,32,.18); text-decoration: none; cursor: pointer; }
+.btn + .btn { margin-top: 10px; }
+.btn-primary { flex-direction: column; gap: 3px; min-height: 58px; padding: 8px 16px; background: var(--cream); color: var(--ink); box-shadow: 0 1px 0 rgba(60,25,10,.10), 0 3px 5px rgba(40,15,5,.08); }
+.btn-primary small { font: 400 11px/1.2 'DM Sans', sans-serif; opacity: .78; }
+
+.how { background: var(--cream-2); border-radius: 22px 22px 22px 6px; padding: 16px 18px; font-size: 14px; }
+.how h2 { margin: 0; font: 700 14px/1.4 'DM Sans', sans-serif; }
+.how p { margin: 8px 0 0; line-height: 1.45; }
+.disclaimer { margin-top: 28px; padding-top: 24px; border-top: 2px solid rgba(46,37,32,.14); font-size: 12px; line-height: 1.5; color: rgba(46,37,32,.70); }
+.disclaimer h2 { margin: 0 0 8px; font: 600 12px/1 'Jost', sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.disclaimer p { margin: 0; }
+.disclaimer .by { margin-top: 10px; }
+.disclaimer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(46,37,32,.45); }
+
+/* The contact group: the "Say hi" tab and the capsule with the e-mail and Instagram icons. */
+.bar { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; align-items: center; justify-content: space-between; padding-right: 14px; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.js .bar { transform: translateY(160%); opacity: 0; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
+.js .bar.show { transform: none; opacity: 1; }
+.tab { transform: translateY(calc(-12px - var(--lift-tab, 0px))); display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 8px 22px 8px 26px; border-radius: 0 6px 22px 0; background: var(--tab); box-shadow: 0 4px 12px rgba(60,25,10,.14), 0 1px 2px rgba(60,25,10,.12); color: var(--ink); }
+.tab b { font: 400 15px/1.15 'DM Sans', sans-serif; }
+.tab span { font: 400 11px/1.25 'DM Sans', sans-serif; color: rgba(46,37,32,.68); }
+.capsule { transform: translateY(calc(0px - var(--lift-capsule, 0px))); position: relative; display: flex; align-items: center; gap: 16px; height: 48px; padding: 0 16px; overflow: hidden; border-radius: 26px 26px 26px 8px; background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(135deg, #A94A21, #8F3E1B); box-shadow: 0 5px 14px rgba(60,25,10,.28), 0 1px 2px rgba(60,25,10,.2); }
+.capsule::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+.capsule > * { position: relative; z-index: 1; }
+/* The capsule clips its children, so the focus ring is drawn inside the icon's area. */
+.capsule a:focus-visible { outline-offset: -3px; }
+/* Each icon's tappable area is 46px wide: the icon, the capsule's padding on its outer side, and half the gap between the icons. */
+.capsule a { display: flex; align-items: center; justify-content: center; width: 22px; height: 48px; margin: 0; position: relative; }
+.capsule a::after { content: ''; position: absolute; top: 0; bottom: 0; left: -16px; right: -8px; }
+.capsule a + .divider + a::after { left: -8px; right: -16px; }
+.capsule svg { width: 22px; height: 22px; fill: none; stroke: var(--cream); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.divider { width: 1px; height: 48px; flex: none; background: linear-gradient(to bottom, transparent, rgba(244,237,224,.3) 28%, rgba(244,237,224,.3) 72%, transparent); }
+
+/* The overlay that tints the lower page while the contact group rises at the end of the page. */
+.shade { position: fixed; left: 0; right: 0; bottom: 0; height: 46%; z-index: 4; pointer-events: none; opacity: 0; background: rgba(31,90,100,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .bar { transition: none; }
+  .reveal, .shade { display: none !important; }
+}
+
+@media (min-width: 900px) {
+  .shape-m { display: none; }
+  .shape-w { display: block; }
+  .page { max-width: 1160px; margin: 0 auto; padding: 64px 48px 240px; }
+  .eyebrow { font-size: 13px; }
+  h1 { font-size: 60px; line-height: 1.04; margin-bottom: 56px; }
+  .cards { display: flex; align-items: flex-start; gap: 40px; }
+  .card { width: 560px; margin: 0; }
+  .card h2 { font-size: 30px; margin-bottom: 10px; }
+  .card p { font-size: 16px; margin-bottom: 22px; max-width: 380px; }
+  .kiln { padding: 60px 56px 60px 64px; }
+  .classes { margin-top: 90px; padding: 60px 64px 60px 56px; }
+  .btn { font-size: 16px; max-width: 360px; }
+  .btn-primary small { font-size: 12px; }
+  .below { margin-top: 56px; }
+  .how { max-width: 560px; font-size: 15px; }
+  .disclaimer { max-width: 560px; font-size: 13px; }
+  .bar { left: 50%; right: auto; width: min(1160px, 100% - 96px); padding-right: 0; justify-content: flex-end; gap: 12px; transform: translateX(-50%); }
+  .js .bar { transform: translate(-50%, 160%); }
+  .js .bar.show { transform: translate(-50%, 0); }
+  .tab { border-radius: 22px 6px 22px 22px; padding-left: 24px; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <path id="shape-m" d="M336.5,-0.7 L345.1,-0.3 L351.2,0.3 L356.5,1.1 L361.3,2.2 L365.7,3.5 L369.9,5.1 L373.7,6.9 L377.3,8.9 L380.6,11.2 L383.6,13.7 L386.4,16.5 L389.0,19.4 L391.3,22.7 L393.3,26.1 L395.1,29.8 L396.6,33.8 L397.9,38.0 L398.9,42.5 L399.6,47.4 L400.1,52.7 L400.2,58.8 L400.1,67.5 L391.4,316.6 L390.9,325.2 L390.3,331.2 L389.5,336.5 L388.4,341.4 L387.1,345.8 L385.6,349.9 L383.8,353.8 L381.7,357.3 L379.5,360.6 L376.9,363.7 L374.2,366.5 L371.2,369.0 L368.0,371.3 L364.5,373.4 L360.8,375.2 L356.9,376.7 L352.7,377.9 L348.1,378.9 L343.3,379.7 L337.9,380.1 L331.8,380.3 L323.2,380.1 L53.5,370.7 L44.9,370.3 L38.8,369.7 L33.5,368.9 L28.7,367.8 L24.3,366.5 L20.1,364.9 L16.3,363.1 L12.7,361.1 L9.4,358.8 L6.4,356.3 L3.6,353.5 L1.0,350.6 L-1.3,347.3 L-3.3,343.9 L-5.1,340.2 L-6.6,336.2 L-7.9,332.0 L-8.9,327.5 L-9.6,322.6 L-10.1,317.3 L-10.2,311.2 L-10.1,302.5 L-1.4,53.4 L-0.9,44.8 L-0.3,38.8 L0.5,33.5 L1.6,28.6 L2.9,24.2 L4.4,20.1 L6.2,16.2 L8.3,12.7 L10.5,9.4 L13.1,6.3 L15.8,3.5 L18.8,1.0 L22.0,-1.3 L25.5,-3.4 L29.2,-5.2 L33.1,-6.7 L37.3,-7.9 L41.9,-8.9 L46.7,-9.7 L52.1,-10.1 L58.2,-10.3 L66.8,-10.1Z"/>
+    <path id="shape-w" d="M499.7,3.2 L509.3,3.7 L516.0,4.4 L521.9,5.3 L527.3,6.5 L532.3,8.0 L536.8,9.7 L541.1,11.7 L545.1,14.0 L548.8,16.5 L552.2,19.3 L555.3,22.4 L558.1,25.7 L560.7,29.3 L563.0,33.1 L565.0,37.3 L566.7,41.7 L568.1,46.4 L569.2,51.4 L570.0,56.8 L570.5,62.8 L570.7,69.6 L570.5,79.2 L560.3,370.7 L559.9,380.4 L559.2,387.1 L558.3,393.0 L557.1,398.4 L555.6,403.3 L553.9,407.9 L551.9,412.2 L549.6,416.2 L547.1,419.8 L544.3,423.2 L541.2,426.4 L537.9,429.2 L534.3,431.8 L530.4,434.0 L526.3,436.0 L521.9,437.7 L517.2,439.1 L512.2,440.2 L506.7,441.1 L500.8,441.6 L494.0,441.8 L484.4,441.6 L60.3,426.8 L50.7,426.3 L44.0,425.6 L38.1,424.7 L32.7,423.5 L27.7,422.0 L23.2,420.3 L18.9,418.3 L14.9,416.0 L11.2,413.5 L7.8,410.7 L4.7,407.6 L1.9,404.3 L-0.7,400.7 L-3.0,396.9 L-5.0,392.7 L-6.7,388.3 L-8.1,383.6 L-9.2,378.6 L-10.0,373.2 L-10.5,367.2 L-10.7,360.4 L-10.5,350.8 L-0.3,59.3 L0.1,49.6 L0.8,42.9 L1.7,37.0 L2.9,31.6 L4.4,26.7 L6.1,22.1 L8.1,17.8 L10.4,13.8 L12.9,10.2 L15.7,6.8 L18.8,3.6 L22.1,0.8 L25.7,-1.8 L29.6,-4.0 L33.7,-6.0 L38.1,-7.7 L42.8,-9.1 L47.8,-10.2 L53.3,-11.1 L59.2,-11.6 L66.0,-11.8 L75.6,-11.6Z"/>
+    <linearGradient id="grad-kiln" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A94A21"/><stop offset="1" stop-color="#8F3E1B"/></linearGradient>
+    <linearGradient id="grad-classes" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1F5A64"/><stop offset="1" stop-color="#174850"/></linearGradient>
+    <radialGradient id="highlight" cx=".2" cy=".1" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.45" result="soft"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="3" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063" result="speckle"/>
+      <feComposite in="speckle" in2="soft" operator="in" result="grained"/>
+      <feMerge><feMergeNode in="soft"/><feMergeNode in="grained"/></feMerge>
+    </filter>
+    <filter id="lift" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow in="SourceGraphic" dx="0" dy="4" stdDeviation="4" flood-color="#5A2814" flood-opacity=".09" result="wide"/>
+      <feDropShadow in="SourceGraphic" dx="0" dy="1" stdDeviation="1" flood-color="#3C190A" flood-opacity=".10" result="tight"/>
+      <feMerge><feMergeNode in="wide"/><feMergeNode in="tight"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<main class="page" id="page">
+  <p class="eyebrow">Community calendar</p>
+  <h1>Higher Fire's <b>kiln notes and classes</b>, in your calendar</h1>
+
+  <div class="cards">
+    <section class="card kiln" aria-labelledby="kiln-title">
+      <svg class="shape shape-m" viewBox="0 0 390 370" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#lift)"><g filter="url(#grain)"><use href="#shape-m" fill="url(#grad-kiln)"/><use href="#shape-m" fill="url(#highlight)"/></g></g></svg>
+      <svg class="shape shape-w" viewBox="0 0 560 430" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#lift)"><g filter="url(#grain)"><use href="#shape-w" fill="url(#grad-kiln)"/><use href="#shape-w" fill="url(#highlight)"/></g></g></svg>
+      <h2 id="kiln-title">Kiln notes &amp; events</h2>
+      <p>Kiln stages from loading to unloading, discard days, closures and workshops.</p>
+      <a class="btn btn-primary" href="webcal://calendar.google.com/calendar/ical/e3813f54da898922b6604a2218d0d7a1c9f6355394b6685841a7884cb99679b8%40group.calendar.google.com/public/basic.ics" aria-label="Subscribe to Kiln notes &amp; events" data-umami-event="subscribe-kiln-webcal">Subscribe<small>with your calendar app</small></a>
+      <a class="btn" href="https://calendar.google.com/calendar/r?cid=ZTM4MTNmNTRkYTg5ODkyMmI2NjA0YTIyMThkMGQ3YTFjOWY2MzU1Mzk0YjY2ODU4NDFhNzg4NGNiOTk2NzliOEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t" aria-label="Add Kiln notes &amp; events to Google Calendar" data-umami-event="subscribe-kiln-google">Add to Google Calendar</a>
+      <button class="btn" type="button" data-copy="https://calendar.google.com/calendar/ical/e3813f54da898922b6604a2218d0d7a1c9f6355394b6685841a7884cb99679b8%40group.calendar.google.com/public/basic.ics" aria-label="Copy the Kiln notes &amp; events link" data-umami-event="subscribe-kiln-copy">Copy link</button>
+    </section>
+
+    <section class="card classes" aria-labelledby="classes-title">
+      <svg class="shape shape-m" viewBox="0 0 390 370" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#lift)"><g filter="url(#grain)"><use href="#shape-m" fill="url(#grad-classes)"/><use href="#shape-m" fill="url(#highlight)"/></g></g></svg>
+      <svg class="shape shape-w" viewBox="0 0 560 430" preserveAspectRatio="none" aria-hidden="true"><g filter="url(#lift)"><g filter="url(#grain)"><use href="#shape-w" fill="url(#grad-classes)"/><use href="#shape-w" fill="url(#highlight)"/></g></g></svg>
+      <h2 id="classes-title">Classes</h2>
+      <p>See when classes run and how much space they take up in the studio.</p>
+      <a class="btn btn-primary" href="webcal://calendar.google.com/calendar/ical/bc80c36710ad1db5c841dd224c413e6398b135a2e544226a2cf8a7aa3e718f00%40group.calendar.google.com/public/basic.ics" aria-label="Subscribe to Classes" data-umami-event="subscribe-classes-webcal">Subscribe<small>with your calendar app</small></a>
+      <a class="btn" href="https://calendar.google.com/calendar/r?cid=YmM4MGMzNjcxMGFkMWRiNWM4NDFkZDIyNGM0MTNlNjM5OGIxMzVhMmU1NDQyMjZhMmNmOGE3YWEzZTcxOGYwMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t" aria-label="Add Classes to Google Calendar" data-umami-event="subscribe-classes-google">Add to Google Calendar</a>
+      <button class="btn" type="button" data-copy="https://calendar.google.com/calendar/ical/bc80c36710ad1db5c841dd224c413e6398b135a2e544226a2cf8a7aa3e718f00%40group.calendar.google.com/public/basic.ics" aria-label="Copy the Classes link" data-umami-event="subscribe-classes-copy">Copy link</button>
+    </section>
+  </div>
+
+  <div class="below">
+    <section class="how">
+      <h2>Another calendar app?</h2>
+      <p>In your app, add a calendar “From URL” and use the copied link.</p>
+    </section>
+    <section class="disclaimer">
+      <h2>Disclaimer</h2>
+      <p>Not an official Higher Fire calendar. Events are generated from the studio's notes using AI, so mistakes can happen.</p>
+      <p class="by">Community calendar by <a href="mailto:gbrunow@outlook.com" data-umami-event="contact-email-name">Gui Brunow</a>. Higher Fire Downtown only.</p>
+    </section>
+  </div>
+</main>
+
+<div class="reveal" id="reveal"></div>
+<div class="shade" id="shade"></div>
+<div class="sr-only" role="status" aria-live="polite" id="copy-status"></div>
+
+<aside class="bar" id="bar" aria-label="Contact">
+  <div class="tab"><b>Say hi</b><span>It's just me on the other end</span></div>
+  <div class="capsule">
+    <a href="mailto:gbrunow@outlook.com?subject=Hi%20from%20the%20Higher%20Fire%20calendar%20page" aria-label="E-mail Gui Brunow" data-umami-event="contact-email"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7.5l8 6 8-6"/></svg></a>
+    <span class="divider" aria-hidden="true"></span>
+    <a href="https://instagram.com/gbrunow" target="_blank" rel="noopener noreferrer" aria-label="Instagram, gbrunow" data-umami-event="contact-instagram"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg></a>
+  </div>
+</aside>
+
+<script>
+// How far through the spare scroll room at the end of the page the visitor is: 0 until the
+// page's own end is reached, 1 after revealHeight more pixels.
+function revealProgress(scrollY, pageHeight, viewportHeight, revealHeight) {
+  var end = Math.max(0, pageHeight - viewportHeight);
+  if (!(revealHeight > 0)) return 0;
+  return Math.max(0, Math.min(1, (scrollY - end) / revealHeight));
+}
+
+// Whether the contact group is visible after a scroll from lastY to y. It shows on a downward
+// scroll past 40px and hides on an upward one, unless the reveal has lifted it.
+function contactVisible(visible, y, lastY, progress) {
+  var dy = y - lastY;
+  if (y > 40 && dy > 6) return true;
+  if (dy < -6 && progress === 0) return false;
+  return visible;
+}
+
+// Copies by selecting the text in an off-screen textarea, for browsers where the Clipboard API is
+// missing or refuses.
+function copyBySelection(text) {
+  return new Promise(function (resolve, reject) {
+    var box = document.createElement('textarea');
+    box.value = text;
+    box.setAttribute('readonly', '');
+    box.style.position = 'fixed';
+    box.style.opacity = '0';
+    var active = document.activeElement;
+    document.body.appendChild(box);
+    try {
+      box.select();
+      // iOS does not select a read-only textarea on select() alone.
+      box.setSelectionRange(0, text.length);
+      if (document.execCommand('copy')) resolve();
+      else reject(new Error('copy failed'));
+    } catch (error) {
+      reject(error);
+    } finally {
+      document.body.removeChild(box);
+      if (active && active.focus) active.focus({ preventScroll: true });
+    }
+  });
+}
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).catch(function () { return copyBySelection(text); });
+  }
+  return copyBySelection(text);
+}
+
+if (typeof document !== 'undefined') {
+  (function () {
+    var page = document.getElementById('page');
+    var reveal = document.getElementById('reveal');
+    var shade = document.getElementById('shade');
+    var bar = document.getElementById('bar');
+    var status = document.getElementById('copy-status');
+    var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var lastY = window.scrollY;
+
+    // Keep the page where its end meets the bottom of the window while the spare room scrolls by.
+    function pin() {
+      page.style.top = Math.min(0, window.innerHeight - page.offsetHeight) + 'px';
+    }
+
+    // Re-pins the page, since its height changes when web fonts load, then updates the reveal.
+    function paint() {
+      pin();
+      if (still) return 0;
+      var p = revealProgress(window.scrollY, page.offsetHeight, window.innerHeight, reveal.offsetHeight);
+      shade.style.opacity = p;
+      bar.style.setProperty('--lift-tab', Math.round(p * reveal.offsetHeight * 0.6) + 'px');
+      bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.3) + 'px');
+      return p;
+    }
+
+    function show() { bar.classList.add('show'); }
+
+    window.addEventListener('scroll', function () {
+      var y = window.scrollY;
+      var p = paint();
+      var next = contactVisible(bar.classList.contains('show'), y, lastY, p);
+      if (next) show();
+      else if (!bar.contains(document.activeElement)) bar.classList.remove('show');
+      if (Math.abs(y - lastY) > 6) lastY = y;
+    }, { passive: true });
+    bar.addEventListener('focusin', show);
+    window.addEventListener('resize', paint);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(paint);
+    pin();
+    paint();
+    setTimeout(show, 3000);
+
+    document.querySelectorAll('[data-copy]').forEach(function (button) {
+      var label = button.textContent;
+      var aria = button.getAttribute('aria-label');
+      var timer;
+      button.addEventListener('click', function () {
+        var url = button.getAttribute('data-copy');
+        copyText(url).then(function () {
+          button.textContent = 'Link copied';
+          button.setAttribute('aria-label', 'Link copied');
+          status.textContent = 'Link copied';
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            button.textContent = label;
+            button.setAttribute('aria-label', aria);
+            status.textContent = '';
+          }, 2000);
+        }, function () {
+          window.prompt('Copy this link:', url);
+        });
+      });
+    });
+  })();
+}
+</script>
+</body>
+</html>
