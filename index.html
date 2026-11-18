@@ -14,8 +14,9 @@
 /* The page draws edge to edge (viewport-fit=cover); text keeps clear of a notch or rounded corner
    by padding at least the safe-area inset on each side. */
 :root { --inset-l: max(20px, env(safe-area-inset-left, 0px)); --inset-r: max(20px, env(safe-area-inset-right, 0px)); }
-/* Grain: a small noise tile, drawn as an image so the browser rasterizes it once. */
+/* Grain: a small noise tile, drawn as an image so the browser rasterizes it once; the overlay's is denser. */
 :root { --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+:root { --noise-strong: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .30 -.10'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
 :root { --cream: #F4EDE0; --cream-2: #EADFCB; --terracotta: #A94A21; --ink: #2E2520; --tab: #FBF7EE; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -79,7 +80,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .divider { width: 1px; height: 48px; flex: none; background: linear-gradient(to bottom, transparent, rgba(244,237,224,.3) 28%, rgba(244,237,224,.3) 72%, transparent); }
 
 /* The overlay that tints the lower page while the contact group rises at the end of the page. */
-.shade { position: absolute; left: 0; right: 0; bottom: 0; height: 46vh; z-index: 4; pointer-events: none; opacity: 0; visibility: hidden; background: rgba(31,90,100,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); }
+.shade { position: absolute; left: 0; right: 0; bottom: 0; height: 46vh; z-index: 4; pointer-events: none; opacity: 0; visibility: hidden; background: var(--noise-strong), rgba(31,90,100,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); }
 
 @media (prefers-reduced-motion: reduce) {
   .js .bar { transition: none; }

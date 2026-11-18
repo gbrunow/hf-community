@@ -118,7 +118,8 @@ test("at the end of the page, a fixed strip gives Safari's toolbar the overlay's
   const rule = html.match(/\.toolbar-tint\s*\{([^}]*)\}/);
   assert.ok(rule, 'the strip has a rule');
   for (const part of [/position: fixed/, /bottom: -8px/, /width: 100%/, /min-height: 12px/, /display: none/]) assert.match(rule[1], part);
-  const shade = html.match(/\.shade\s*\{[^}]*background:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([.\d]+)\)/);
+  const shade = html.match(/\.shade\s*\{[^}]*background:\s*var\(--noise-strong\),\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([.\d]+)\)/);
+  assert.ok(shade, 'the overlay is grain over an rgba tint');
   const page = cssVar('cream').match(/[0-9A-Fa-f]{2}/g).map((h) => parseInt(h, 16));
   const floor = page.map((c, i) => Math.round(c + (Number(shade[i + 1]) - c) * Number(shade[4]))).join(', ');
   assert.match(rule[1], new RegExp(`background-color: rgb\\(${floor}\\)`));
