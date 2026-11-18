@@ -14,6 +14,8 @@
 /* The page draws edge to edge (viewport-fit=cover); text keeps clear of a notch or rounded corner
    by padding at least the safe-area inset on each side. */
 :root { --inset-l: max(20px, env(safe-area-inset-left, 0px)); --inset-r: max(20px, env(safe-area-inset-right, 0px)); }
+/* Grain: a small noise tile, drawn as an image so the browser rasterizes it once. */
+:root { --noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
 :root { --cream: #F4EDE0; --cream-2: #EADFCB; --terracotta: #A94A21; --ink: #2E2520; --tab: #FBF7EE; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -32,7 +34,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .card { position: relative; color: var(--cream); width: clamp(390px, 60vw + 160px, 560px); margin-bottom: clamp(40px, 4vw + 24px, 64px); }
 /* The card's outline: a squircle of exponent 2.6, which CSS writes as superellipse(log2 2.6),
    tilted 2° clockwise behind the upright content. Without corner-shape the corners are plainly round. */
-.card::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: 64px; corner-shape: superellipse(1.38); transform: rotate(2deg) scale(1.03); filter: url(#grain); box-shadow: 0 4px 8px rgba(90,40,20,.09), 0 1px 2px rgba(60,25,10,.10); background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(to bottom right, var(--from), var(--to)); }
+.card::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: 64px; corner-shape: superellipse(1.38); transform: rotate(2deg) scale(1.03); box-shadow: 0 4px 8px rgba(90,40,20,.09), 0 1px 2px rgba(60,25,10,.10); background: var(--noise), radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(to bottom right, var(--from), var(--to)); }
 .card > * { position: relative; z-index: 1; }
 .card h2 { font: 500 24px/1.1 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px; }
 .card p { margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
@@ -64,7 +66,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .tab b { font: 400 15px/1.15 'DM Sans', sans-serif; }
 .tab span { font: 400 11px/1.25 'DM Sans', sans-serif; color: rgba(46,37,32,.68); }
 .capsule { transform: translateY(calc(0px - var(--lift-capsule, 0px))); position: relative; display: flex; align-items: center; gap: 16px; height: 48px; padding: 0 16px; overflow: hidden; border-radius: 26px 26px 26px 8px; background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(135deg, #A94A21, #8F3E1B); box-shadow: 0 5px 14px rgba(60,25,10,.28), 0 1px 2px rgba(60,25,10,.2); }
-.capsule::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+.capsule::before { content: ''; position: absolute; inset: 0; pointer-events: none; background-image: var(--noise); }
 .capsule > * { position: relative; z-index: 1; }
 /* The capsule clips its children, so the focus ring is drawn inside the icon's area. */
 .capsule a:focus-visible { outline-offset: -3px; }
@@ -108,18 +110,6 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 </style>
 </head>
 <body>
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <filter id="grain" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="0.45" result="soft"/>
-      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="3" result="noise"/>
-      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .19 -.063" result="speckle"/>
-      <feComposite in="speckle" in2="soft" operator="in" result="grained"/>
-      <feMerge><feMergeNode in="soft"/><feMergeNode in="grained"/></feMerge>
-    </filter>
-  </defs>
-</svg>
 
 <main class="page" id="page">
   <p class="eyebrow">Community calendar</p>
@@ -231,8 +221,10 @@ if (typeof document !== 'undefined') {
     var lastY = window.scrollY;
 
     // Keep the page where its end meets the bottom of the window while the spare room scrolls by.
+    var pinned, painted;
     function pin() {
-      page.style.top = Math.min(0, window.innerHeight - page.offsetHeight) + 'px';
+      var top = Math.min(0, window.innerHeight - page.offsetHeight);
+      if (top !== pinned) page.style.top = (pinned = top) + 'px';
     }
 
     // Re-pins the page, since its height changes when web fonts load, then updates the reveal.
@@ -240,10 +232,13 @@ if (typeof document !== 'undefined') {
       pin();
       if (still) return 0;
       var p = revealProgress(window.scrollY, page.offsetHeight, window.innerHeight, reveal.offsetHeight);
-      shade.style.opacity = p;
-      shade.style.visibility = p > 0 ? 'visible' : 'hidden';
-      bar.style.setProperty('--lift-tab', Math.round(p * reveal.offsetHeight * 0.6) + 'px');
-      bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.3) + 'px');
+      if (p !== painted) {
+        painted = p;
+        shade.style.opacity = p;
+        shade.style.visibility = p > 0 ? 'visible' : 'hidden';
+        bar.style.setProperty('--lift-tab', Math.round(p * reveal.offsetHeight * 0.6) + 'px');
+        bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.3) + 'px');
+      }
       return p;
     }
 
