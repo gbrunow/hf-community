@@ -33,7 +33,7 @@ test('every line of copy is on the page word for word', () => {
     'Subscribe with your calendar app',
     'Add to Google Calendar',
     'Copy link',
-    'Another calendar app?',
+    'Adding it manually?',
     'In your app, add a calendar “From URL” and use the copied link.',
     'Disclaimer',
     "Not an official Higher Fire calendar. Events are generated from the studio's notes using AI, so mistakes can happen.",
