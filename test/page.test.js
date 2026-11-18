@@ -17,7 +17,7 @@ const KILN_ID = 'e3813f54da898922b6604a2218d0d7a1c9f6355394b6685841a7884cb99679b
 const CLASSES_ID = 'bc80c36710ad1db5c841dd224c413e6398b135a2e544226a2cf8a7aa3e718f00%40group.calendar.google.com';
 
 test('the page has a viewport, a title and a description', () => {
-  assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1">/);
+  assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">/);
   assert.match(html, /<title>Higher Fire Community Calendar<\/title>/);
   assert.match(html, /<meta name="description" content="Higher Fire community calendar with kiln schedule, discard days, and more\.">/);
 });

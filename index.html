@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Higher Fire Community Calendar</title>
 <meta name="description" content="Higher Fire community calendar with kiln schedule, discard days, and more.">
 <script>document.documentElement.classList.add('js')</script>
@@ -11,6 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <script defer src="https://cloud.umami.is/script.js" data-website-id="d308e14e-3af8-47b5-8421-b3c96235007d" data-domains="gbrunow.github.io"></script>
 <style>
+/* The page draws edge to edge (viewport-fit=cover); text keeps clear of a notch or rounded corner
+   by padding at least the safe-area inset on each side. */
+:root { --inset-l: max(20px, env(safe-area-inset-left, 0px)); --inset-r: max(20px, env(safe-area-inset-right, 0px)); }
 :root { --cream: #F4EDE0; --cream-2: #EADFCB; --terracotta: #A94A21; --ink: #2E2520; --tab: #FBF7EE; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -18,7 +21,7 @@ body { background: var(--cream); color: var(--ink); font-family: 'DM Sans', syst
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* The page, then spare scroll room after it (see "reveal" below). */
-.page { position: sticky; overflow: hidden; padding: 22px 20px 240px; }
+.page { position: sticky; overflow: hidden; padding: 22px var(--inset-r) 240px var(--inset-l); }
 .reveal { display: none; height: 260px; }
 .js .reveal { display: block; }
 
@@ -33,8 +36,8 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .card > * { position: relative; z-index: 1; }
 .card h2 { font: 500 24px/1.1 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px; }
 .card p { margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
-.kiln { --from: #A94A21; --to: #8F3E1B; margin-left: -80px; padding: 46px 46px 46px 100px; }
-.classes { --from: #1F5A64; --to: #174850; margin-left: auto; margin-right: -44px; padding: 46px 94px 46px 34px; }
+.kiln { --from: #A94A21; --to: #8F3E1B; margin-left: calc(-60px - var(--inset-l)); padding: 46px 46px 46px calc(80px + var(--inset-l)); }
+.classes { --from: #1F5A64; --to: #174850; margin-left: auto; margin-right: calc(-24px - var(--inset-r)); padding: 46px calc(74px + var(--inset-r)) 46px 34px; }
 
 .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; font: 600 15px/1 'DM Sans', sans-serif; color: var(--cream); background: rgba(46,37,32,.18); text-decoration: none; cursor: pointer; }
 .btn + .btn { margin-top: 10px; }
@@ -51,11 +54,13 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .disclaimer a { color: inherit; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: rgba(46,37,32,.45); }
 
 /* The contact group: the "Say hi" tab and the capsule with the e-mail and Instagram icons. */
-.bar { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; align-items: center; justify-content: space-between; padding-right: 14px; pointer-events: none; }
+.bar { position: fixed; left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 5; display: flex; align-items: center; justify-content: space-between; padding-right: calc(var(--inset-r) - 6px); pointer-events: none; }
 .bar > * { pointer-events: auto; }
-.js .bar { transform: translateY(160%); opacity: 0; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease; }
-.js .bar.show { transform: none; opacity: 1; }
-.tab { transform: translateY(calc(-12px - var(--lift-tab, 0px))); display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 8px 22px 8px 26px; border-radius: 0 6px 22px 0; background: var(--tab); box-shadow: 0 4px 12px rgba(60,25,10,.14), 0 1px 2px rgba(60,25,10,.12); color: var(--ink); }
+/* Hidden, the bar and the overlay are invisible rather than only transparent: Safari can treat a fixed
+   element at the bottom edge as a toolbar and stop drawing the page under its own. */
+.js .bar { transform: translateY(160%); opacity: 0; visibility: hidden; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease, visibility 0s .35s; }
+.js .bar.show { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
+.tab { transform: translateY(calc(-12px - var(--lift-tab, 0px))); display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 8px 22px 8px calc(var(--inset-l) + 6px); border-radius: 0 6px 22px 0; background: var(--tab); box-shadow: 0 4px 12px rgba(60,25,10,.14), 0 1px 2px rgba(60,25,10,.12); color: var(--ink); }
 .tab b { font: 400 15px/1.15 'DM Sans', sans-serif; }
 .tab span { font: 400 11px/1.25 'DM Sans', sans-serif; color: rgba(46,37,32,.68); }
 .capsule { transform: translateY(calc(0px - var(--lift-capsule, 0px))); position: relative; display: flex; align-items: center; gap: 16px; height: 48px; padding: 0 16px; overflow: hidden; border-radius: 26px 26px 26px 8px; background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(135deg, #A94A21, #8F3E1B); box-shadow: 0 5px 14px rgba(60,25,10,.28), 0 1px 2px rgba(60,25,10,.2); }
@@ -71,7 +76,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .divider { width: 1px; height: 48px; flex: none; background: linear-gradient(to bottom, transparent, rgba(244,237,224,.3) 28%, rgba(244,237,224,.3) 72%, transparent); }
 
 /* The overlay that tints the lower page while the contact group rises at the end of the page. */
-.shade { position: fixed; left: 0; right: 0; bottom: 0; height: 46%; z-index: 4; pointer-events: none; opacity: 0; background: rgba(31,90,100,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); }
+.shade { position: fixed; left: 0; right: 0; bottom: 0; height: 46%; z-index: 4; pointer-events: none; opacity: 0; visibility: hidden; background: rgba(31,90,100,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); -webkit-mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); mask-image: linear-gradient(to top, #000 0%, #000 32%, transparent 100%); }
 
 @media (prefers-reduced-motion: reduce) {
   .js .bar { transition: none; }
@@ -79,7 +84,8 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 }
 
 @media (min-width: 900px) {
-  .page { max-width: 1160px; margin: 0 auto; padding: 64px 48px 240px; }
+  :root { --inset-l: max(48px, env(safe-area-inset-left, 0px)); --inset-r: max(48px, env(safe-area-inset-right, 0px)); }
+  .page { max-width: 1160px; margin: 0 auto; padding: 64px var(--inset-r) 240px var(--inset-l); }
   .eyebrow { font-size: 13px; }
   h1 { font-size: 60px; line-height: 1.04; margin-bottom: 56px; }
   .cards { display: flex; align-items: flex-start; gap: 40px; }
@@ -94,7 +100,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
   .below { margin-top: 56px; }
   .how { max-width: 560px; font-size: 15px; }
   .disclaimer { max-width: 560px; font-size: 13px; }
-  .bar { left: 50%; right: auto; width: min(1160px, 100% - 96px); padding-right: 0; justify-content: flex-end; gap: 12px; transform: translateX(-50%); }
+  .bar { left: 50%; right: auto; width: min(1160px, 100% - var(--inset-l) - var(--inset-r)); padding-right: 0; justify-content: flex-end; gap: 12px; transform: translateX(-50%); }
   .js .bar { transform: translate(-50%, 160%); }
   .js .bar.show { transform: translate(-50%, 0); }
   .tab { border-radius: 22px 6px 22px 22px; padding-left: 24px; }
@@ -235,6 +241,7 @@ if (typeof document !== 'undefined') {
       if (still) return 0;
       var p = revealProgress(window.scrollY, page.offsetHeight, window.innerHeight, reveal.offsetHeight);
       shade.style.opacity = p;
+      shade.style.visibility = p > 0 ? 'visible' : 'hidden';
       bar.style.setProperty('--lift-tab', Math.round(p * reveal.offsetHeight * 0.6) + 'px');
       bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.3) + 'px');
       return p;
