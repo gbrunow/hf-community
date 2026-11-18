@@ -67,6 +67,18 @@ test('the Google Calendar links open in a new tab', () => {
   for (const link of links) assert.match(link, / target="_blank" rel="noopener noreferrer"/);
 });
 
+test('on a phone, the Classes card mirrors the Kiln notes card at the other edge', () => {
+  const rule = (name) => html.match(new RegExp(`\\n\\.${name} \\{([^}]*)\\}`))[1];
+  const kiln = rule('kiln');
+  const classes = rule('classes');
+  const past = (r, side) => r.match(new RegExp(`margin-${side}: calc\\((-\\d+)px - var\\(--inset-${side[0]}\\)\\)`))[1];
+  assert.equal(past(classes, 'right'), past(kiln, 'left'), 'both run the same distance past their edge');
+  const sides = (r) => r.match(/padding: ([^;]+);/)[1].match(/calc\((?:[^()]|\([^()]*\))*\)|\S+/g);
+  const [kt, kr, kb, kl] = sides(kiln);
+  const [ct, cr, cb, cl] = sides(classes);
+  assert.deepEqual([ct, cr.replace('--inset-r', '--inset-l'), cb, cl], [kt, kl, kb, kr], 'the padding is mirrored');
+});
+
 test("each card's buttons are labelled with their calendar, for screen readers", () => {
   for (const calendar of ['Kiln notes &amp; events', 'Classes']) {
     for (const label of [`Subscribe to ${calendar}`, `Add ${calendar} to Google Calendar`, `Copy the ${calendar} link`]) {
