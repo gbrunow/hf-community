@@ -67,17 +67,16 @@ test('the Google Calendar links open in a new tab', () => {
   for (const link of links) assert.match(link, / target="_blank" rel="noopener noreferrer"/);
 });
 
-test('on a phone, the Classes card mirrors the Kiln notes card at the other edge', () => {
+test('on a phone, both cards center their content on the page and run the same distance past opposite edges', () => {
   const rule = (name) => html.match(new RegExp(`\\n\\.${name} \\{([^}]*)\\}`))[1];
   const kiln = rule('kiln');
   const classes = rule('classes');
-  const kilnPast = Number(kiln.match(/margin-left: calc\((-\d+)px - var\(--inset-l\)\)/)[1]);
-  const classesPast = Number(classes.match(/margin-left: calc\(100% - var\(--card-w\) \+ (\d+)px \+ var\(--inset-r\)\)/)[1]);
-  assert.equal(classesPast, -kilnPast, 'both run the same distance past their edge');
-  const sides = (r) => r.match(/padding: ([^;]+);/)[1].match(/calc\((?:[^()]|\([^()]*\))*\)|\S+/g);
-  const [kt, kr, kb, kl] = sides(kiln);
-  const [ct, cr, cb, cl] = sides(classes);
-  assert.deepEqual([ct, cr.replace('--inset-r', '--inset-l'), cb, cl], [kt, kl, kb, kr], 'the padding is mirrored');
+  const centered = '(100% - var(--cw)) / 2';
+  assert.ok(kiln.match(/padding: [^;]+;/)[0].endsWith(`calc(60px + var(--inset-l) + ${centered});`), 'Kiln notes pads its left side to center its content');
+  assert.ok(classes.includes(`padding: 46px calc(60px + var(--inset-r) + ${centered}) 46px 46px;`), 'Classes pads its right side the same way');
+  assert.match(kiln, /margin-left: calc\(-60px - var\(--inset-l\)\)/);
+  assert.match(classes, /width: calc\(46px \+ \(100% \+ var\(--cw\)\) \/ 2 \+ var\(--inset-r\) \+ 60px\)/, 'Classes reaches 60px past the right edge');
+  assert.match(kiln, /width: calc\(60px \+ var\(--inset-l\) \+ \(100% \+ var\(--cw\)\) \/ 2 \+ 46px\)/, 'Kiln notes reaches 46px past its centered content');
 });
 
 test("each card's buttons are labelled with their calendar, for screen readers", () => {
