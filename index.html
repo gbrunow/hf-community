@@ -61,7 +61,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .bar > * { pointer-events: auto; }
 /* Hidden, the bar and the overlay are invisible rather than only transparent: Safari can treat a fixed
    element at the bottom edge as a toolbar and stop drawing the page under its own. */
-.js .bar { transform: translateY(160%); opacity: 0; visibility: hidden; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease, visibility 0s .35s; }
+.js .bar { transform: translateY(calc(100% + 40px + env(safe-area-inset-bottom, 0px))); opacity: 0; visibility: hidden; transition: transform .35s cubic-bezier(.2,.8,.2,1), opacity .25s ease, visibility 0s .35s; }
 .js .bar.show { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
 .tab { transform: translateY(calc(-12px - var(--lift-tab, 0px))); display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 8px 22px 8px calc(var(--inset-l) + 6px); border-radius: 0 6px 22px 0; background: var(--tab); box-shadow: 0 4px 12px rgba(60,25,10,.14), 0 1px 2px rgba(60,25,10,.12); color: var(--ink); }
 .tab b { font: 400 15px/1.15 'DM Sans', sans-serif; }
@@ -84,6 +84,16 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 @media (prefers-reduced-motion: reduce) {
   .js .bar { transition: none; }
   .reveal, .shade { display: none !important; }
+}
+
+/* Safari on iOS colors its bottom toolbar from a fixed element at the bottom edge (at least 80% wide,
+   11px tall, within a few pixels of the edge), else from body's background. During the reveal this strip
+   gives it the overlay's solid bottom (--cream under the .shade tint); elsewhere it isn't rendered, so
+   the page shows through the toolbar. Hidden, the contact bar sits wholly below the screen for the same
+   reason. Other browsers would just show a line, so the strip is for iOS only. */
+.toolbar-tint { position: fixed; bottom: -8px; left: 0; width: 100%; min-height: 12px; margin: 0; padding: 0; z-index: 3; pointer-events: none; background-color: rgb(176, 190, 184); display: none; }
+@supports (-webkit-touch-callout: none) {
+  .toolbar-tint.on { display: block; }
 }
 
 /* Where supported, the scroll itself drives the lift and the overlay, so they move in step with the
@@ -118,7 +128,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
   .how { max-width: 560px; font-size: 15px; }
   .disclaimer { max-width: 560px; font-size: 13px; }
   .bar { left: 50%; right: auto; width: min(1160px, 100% - var(--inset-l) - var(--inset-r)); padding-right: 0; justify-content: flex-end; gap: 12px; transform: translateX(-50%); }
-  .js .bar { transform: translate(-50%, 160%); }
+  .js .bar { transform: translate(-50%, calc(100% + 40px + env(safe-area-inset-bottom, 0px))); }
   .js .bar.show { transform: translate(-50%, 0); }
   .tab { border-radius: 22px 6px 22px 22px; padding-left: 24px; }
 }
@@ -161,6 +171,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
   </div>
 </main>
 
+<div class="toolbar-tint" id="toolbar-tint" aria-hidden="true"></div>
 <div class="reveal" id="reveal"><div class="shade" id="shade"></div></div>
 <div class="sr-only" role="status" aria-live="polite" id="copy-status"></div>
 
@@ -229,6 +240,7 @@ if (typeof document !== 'undefined') {
     var page = document.getElementById('page');
     var reveal = document.getElementById('reveal');
     var shade = document.getElementById('shade');
+    var tint = document.getElementById('toolbar-tint');
     var bar = document.getElementById('bar');
     var status = document.getElementById('copy-status');
     var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -240,6 +252,7 @@ if (typeof document !== 'undefined') {
     function paint() {
       if (still) return 0;
       var p = revealProgress(window.scrollY, page.offsetHeight, window.innerHeight, reveal.offsetHeight);
+      tint.classList.toggle('on', p > 0);
       if (p !== painted && !driven) {
         painted = p;
         shade.style.opacity = p;

@@ -114,6 +114,18 @@ test('where supported, the scroll itself drives the end-of-page lift, to the sam
   assert.equal(to('lift-capsule'), -(reveal * share('lift-capsule')));
 });
 
+test("at the end of the page, a fixed strip gives Safari's toolbar the overlay's bottom color", () => {
+  const rule = html.match(/\.toolbar-tint\s*\{([^}]*)\}/);
+  assert.ok(rule, 'the strip has a rule');
+  for (const part of [/position: fixed/, /bottom: -8px/, /width: 100%/, /min-height: 12px/, /display: none/]) assert.match(rule[1], part);
+  const shade = html.match(/\.shade\s*\{[^}]*background:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([.\d]+)\)/);
+  const page = cssVar('cream').match(/[0-9A-Fa-f]{2}/g).map((h) => parseInt(h, 16));
+  const floor = page.map((c, i) => Math.round(c + (Number(shade[i + 1]) - c) * Number(shade[4]))).join(', ');
+  assert.match(rule[1], new RegExp(`background-color: rgb\\(${floor}\\)`));
+  assert.match(html, /\.toolbar-tint\.on \{ display: block; \}/);
+  assert.match(html, /tint\.classList\.toggle\('on', p > 0\)/, 'the script shows it only during the reveal');
+});
+
 test('the reveal is 0 until the end of the page, then grows to 1 over the spare room', () => {
   const { revealProgress } = helpers();
   assert.equal(revealProgress(0, 1000, 700, 260), 0);
