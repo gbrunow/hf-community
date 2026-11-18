@@ -86,6 +86,20 @@ h1 b { font-weight: 600; color: var(--terracotta); }
   .reveal, .shade { display: none !important; }
 }
 
+/* Where supported, the scroll itself drives the lift and the overlay, so they move in step with the
+   finger; the script's scroll handler does it elsewhere and lags behind on iOS. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .js .tab, .js .capsule, .js .shade { animation-timing-function: linear; animation-fill-mode: both; animation-timeline: scroll(root); animation-range: calc(100% - 260px) 100%; }
+    .js .tab { animation-name: lift-tab; }
+    .js .capsule { animation-name: lift-capsule; }
+    .js .shade { animation-name: shade-in; }
+  }
+}
+@keyframes lift-tab { from { transform: translateY(-12px); } to { transform: translateY(-168px); } }
+@keyframes lift-capsule { from { transform: translateY(0); } to { transform: translateY(-78px); } }
+@keyframes shade-in { from { opacity: 0; visibility: visible; } to { opacity: 1; visibility: visible; } }
+
 @media (min-width: 900px) {
   :root { --inset-l: max(48px, env(safe-area-inset-left, 0px)); --inset-r: max(48px, env(safe-area-inset-right, 0px)); }
   .page { max-width: 1160px; margin: 0 auto; padding: 64px var(--inset-r) 240px var(--inset-l); }
@@ -218,6 +232,7 @@ if (typeof document !== 'undefined') {
     var bar = document.getElementById('bar');
     var status = document.getElementById('copy-status');
     var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var driven = !still && !!(window.CSS && CSS.supports('animation-timeline: scroll()'));
     var lastY = window.scrollY;
 
     // Keep the page where its end meets the bottom of the window while the spare room scrolls by.
@@ -225,7 +240,7 @@ if (typeof document !== 'undefined') {
     function paint() {
       if (still) return 0;
       var p = revealProgress(window.scrollY, page.offsetHeight, window.innerHeight, reveal.offsetHeight);
-      if (p !== painted) {
+      if (p !== painted && !driven) {
         painted = p;
         shade.style.opacity = p;
         shade.style.visibility = p > 0 ? 'visible' : 'hidden';

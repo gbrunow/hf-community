@@ -105,6 +105,15 @@ function helpers() {
   return context;
 }
 
+test('where supported, the scroll itself drives the end-of-page lift, to the same heights as the script', () => {
+  const reveal = Number(html.match(/\.reveal\s*\{[^}]*height:\s*(\d+)px/)[1]);
+  assert.match(html, new RegExp(`animation-timeline: scroll\\(root\\); animation-range: calc\\(100% - ${reveal}px\\) 100%`));
+  const share = (name) => Number(html.match(new RegExp(`'--${name}', Math\\.round\\(p \\* reveal\\.offsetHeight \\* ([.\\d]+)\\)`))[1]);
+  const to = (name) => Number(html.match(new RegExp(`@keyframes ${name} \\{[^}]*\\}\\s*to \\{ transform: translateY\\((-?\\d+)px\\)`))[1]);
+  assert.equal(to('lift-tab'), -(12 + reveal * share('lift-tab')));
+  assert.equal(to('lift-capsule'), -(reveal * share('lift-capsule')));
+});
+
 test('the reveal is 0 until the end of the page, then grows to 1 over the spare room', () => {
   const { revealProgress } = helpers();
   assert.equal(revealProgress(0, 1000, 700, 260), 0);
