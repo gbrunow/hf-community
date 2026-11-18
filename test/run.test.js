@@ -65,7 +65,7 @@ test("an event's description quotes the note, links its row and shares the calen
   );
   assert.equal(sections[2], '─'.repeat(19));
   assert.equal(sections[3], world.eval('CONTENT.contact'));
-  assert.match(sections[4], /^Share this calendar:\nwebcal:\/\/calendar\.google\.com\/calendar\/ical\/.+\/public\/basic\.ics$/);
+  assert.equal(sections[4], 'Share this calendar:\nhttps://gbrunow.github.io/hf-community/');
   assert.equal(sections[6], world.eval('CONTENT.disclaimer'));
   assert.match(sections[7], /Check the original note before relying on an event\.$/);
 });
@@ -76,7 +76,7 @@ test('the calendar description shares the calendar and links the kiln notes', ()
 
   const description = world.calendars[DT].description;
   assert.ok(description.startsWith(world.eval('CONTENT.contact')));
-  assert.match(description, /Share this calendar:\nwebcal:\/\//);
+  assert.ok(description.includes('Share this calendar:\nhttps://gbrunow.github.io/hf-community/'));
   assert.match(description, /before relying on an event:\nhttps:\/\/docs\.google\.com\/spreadsheets\/d\/SHEET\/edit$/);
 });
 

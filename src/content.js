@@ -18,8 +18,9 @@ const CONTENT = {
 
   contact: 'Community calendar by Gui Brunow (gbrunow@outlook.com).',
 
-  // {shareUrl}: the calendar's public feed, which opens a subscribe prompt on Apple devices.
-  share: 'Share this calendar:\n{shareUrl}',
+  // The landing page, which has every way to subscribe and counts the visits. {shareUrl} is the
+  // calendar's raw public feed, which opens a subscribe prompt on Apple devices.
+  share: 'Share this calendar:\nhttps://gbrunow.github.io/hf-community/',
 
   disclaimer: 'DISCLAIMER: Not an official Higher Fire calendar.',
 

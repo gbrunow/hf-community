@@ -180,7 +180,7 @@ test('hand-made events in the sync window get the disclaimers below their own te
   const dentist = manualEvent(world, 'Dentist (mine)').description;
   assert.ok(dentist.startsWith('my own note\n\n─'), 'their text stays first');
   assert.ok(dentist.includes(CONTACT));
-  assert.ok(dentist.includes('Share this calendar:\nwebcal://'));
+  assert.ok(dentist.includes('Share this calendar:\nhttps://gbrunow.github.io/hf-community/'));
   assert.ok(dentist.endsWith(DISCLAIMER));
   assert.ok(!dentist.includes(AI_NOTICE), 'a hand-made event is not AI-generated');
 });
