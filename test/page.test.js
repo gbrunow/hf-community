@@ -61,6 +61,12 @@ test('each calendar has a webcal link, a Google add link and a copy link for the
   });
 });
 
+test('the Google Calendar links open in a new tab', () => {
+  const links = html.match(/<a [^>]*href="https:\/\/calendar\.google\.com\/calendar\/r\?cid=[^>]*>/g);
+  assert.equal(links.length, 2);
+  for (const link of links) assert.match(link, / target="_blank" rel="noopener noreferrer"/);
+});
+
 test("each card's buttons are labelled with their calendar, for screen readers", () => {
   for (const calendar of ['Kiln notes &amp; events', 'Classes']) {
     for (const label of [`Subscribe to ${calendar}`, `Add ${calendar} to Google Calendar`, `Copy the ${calendar} link`]) {
