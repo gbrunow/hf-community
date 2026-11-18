@@ -24,7 +24,7 @@ body { background: var(--cream); color: var(--ink); font-family: 'DM Sans', syst
 
 /* The page, then spare scroll room after it (see "reveal" below). Nothing fixed or sticky touches the
    bottom edge of the window: Safari then stops drawing the page under its own toolbar. */
-.page { overflow: hidden; padding: 22px var(--inset-r) 240px var(--inset-l); }
+.page { overflow: hidden; padding: 22px var(--inset-r) 90px var(--inset-l); }
 .reveal { display: none; position: relative; height: 260px; }
 .js .reveal { display: block; }
 
@@ -107,7 +107,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
   }
 }
 @keyframes lift-tab { from { transform: translateY(-12px); } to { transform: translateY(-168px); } }
-@keyframes lift-capsule { from { transform: translateY(0); } to { transform: translateY(-78px); } }
+@keyframes lift-capsule { from { transform: translateY(0); } to { transform: translateY(-13px); } }
 @keyframes shade-in { from { opacity: 0; visibility: visible; } to { opacity: 1; visibility: visible; } }
 
 @media (min-width: 900px) {
@@ -258,7 +258,7 @@ if (typeof document !== 'undefined') {
         shade.style.opacity = p;
         shade.style.visibility = p > 0 ? 'visible' : 'hidden';
         bar.style.setProperty('--lift-tab', Math.round(p * reveal.offsetHeight * 0.6) + 'px');
-        bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.3) + 'px');
+        bar.style.setProperty('--lift-capsule', Math.round(p * reveal.offsetHeight * 0.05) + 'px');
       }
       return p;
     }
