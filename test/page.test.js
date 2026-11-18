@@ -249,3 +249,10 @@ test('small text is readable: at least 4.5 to 1 against what it sits on, at the 
   };
   for (const [what, ratio] of Object.entries(checks)) assert.ok(ratio >= 4.5, `${what}: ${ratio.toFixed(2)}`);
 });
+
+test('the README sends subscribers to the page and carries no privacy policy or terms', () => {
+  const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+  assert.match(readme, /https:\/\/gbrunow\.github\.io\/hf-community\//);
+  assert.doesNotMatch(readme, /^## (Privacy policy|Terms)/m);
+  assert.doesNotMatch(readme, /privacy policy|provided as is/i);
+});
