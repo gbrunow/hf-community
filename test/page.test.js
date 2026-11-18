@@ -220,10 +220,10 @@ function inkAlpha(selector, property) {
   assert.ok(m, `${selector} sets ${property} to an ink tint`);
   return Number(m[1]);
 }
-/** The first stop of a gradient: its lightest color. */
-function firstStop(id) {
-  const m = html.match(new RegExp(`id="${id}"[^>]*>\\s*<stop[^>]*stop-color="(#[0-9A-Fa-f]{6})"`));
-  assert.ok(m, `${id} has a first stop`);
+/** The lighter end of a card's gradient: the color its rule gives to --from. */
+function cardFrom(selector) {
+  const m = html.match(new RegExp(`\\${selector}\\s*\\{[^}]*--from:\\s*(#[0-9A-Fa-f]{6})`));
+  assert.ok(m, `${selector} sets --from`);
   return m[1];
 }
 
@@ -231,10 +231,10 @@ test('small text is readable: at least 4.5 to 1 against what it sits on, at the 
   const cream = cssVar('cream');
   const ink = cssVar('ink');
   const tab = cssVar('tab');
-  const highlight = Number(html.match(/id="highlight"[^>]*>\s*<stop[^>]*stop-opacity="([.\d]+)"/)[1]);
+  const highlight = Number(html.match(/\.card::before\s*\{[^}]*radial-gradient\([^,]*,\s*rgba\(255,\s*255,\s*255,\s*([.\d]+)\)/)[1]);
   const lightest = (color) => blend('#ffffff', color, highlight);
-  const kiln = lightest(firstStop('grad-kiln'));
-  const classes = lightest(firstStop('grad-classes'));
+  const kiln = lightest(cardFrom('.kiln'));
+  const classes = lightest(cardFrom('.classes'));
   const button = inkAlpha('.btn', 'background');
   const smallOpacity = Number(html.match(/\.btn-primary small\s*\{[^}]*opacity:\s*([.\d]+)/)[1]);
   const checks = {
