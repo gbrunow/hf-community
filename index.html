@@ -33,7 +33,7 @@ body { background: var(--cream); color: var(--ink); font-family: 'DM Sans', syst
 h1 { font: 400 32px/1.08 'Jost', sans-serif; letter-spacing: .02em; text-transform: uppercase; margin: 0 0 34px; }
 h1 b { font-weight: 600; color: var(--terracotta); }
 
-.card { position: relative; color: var(--cream); width: clamp(390px, 60vw + 160px, 560px); margin-bottom: clamp(40px, 4vw + 24px, 64px); }
+.card { --card-w: clamp(390px, 60vw + 160px, 560px); position: relative; color: var(--cream); width: var(--card-w); margin-bottom: clamp(40px, 4vw + 24px, 64px); }
 /* The card's outline: a squircle of exponent 2.6, which CSS writes as superellipse(log2 2.6),
    tilted 2° clockwise behind the upright content. Without corner-shape the corners are plainly round. */
 .card::before { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: 64px; corner-shape: superellipse(1.38); transform: rotate(2deg) scale(1.03); box-shadow: 0 4px 8px rgba(90,40,20,.09), 0 1px 2px rgba(60,25,10,.10); background: var(--noise-strong), radial-gradient(circle at 20% 10%, rgba(255,255,255,.04), rgba(255,255,255,0) 70%), linear-gradient(to bottom right, var(--from), var(--to)); }
@@ -41,7 +41,7 @@ h1 b { font-weight: 600; color: var(--terracotta); }
 .card h2 { font: 500 24px/1.1 'Jost', sans-serif; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 8px; }
 .card p { margin: 0 0 18px; font-size: 14px; line-height: 1.4; }
 .kiln { --from: #A94A21; --to: #8F3E1B; margin-left: calc(-60px - var(--inset-l)); padding: 46px 46px 46px calc(80px + var(--inset-l)); }
-.classes { --from: #1F5A64; --to: #174850; margin-left: auto; margin-right: calc(-60px - var(--inset-r)); padding: 46px calc(80px + var(--inset-r)) 46px 46px; }
+.classes { --from: #1F5A64; --to: #174850; margin-left: calc(100% - var(--card-w) + 60px + var(--inset-r)); padding: 46px calc(80px + var(--inset-r)) 46px 46px; }
 
 .btn { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; font: 600 15px/1 'DM Sans', sans-serif; color: var(--cream); background: rgba(46,37,32,.18); text-decoration: none; cursor: pointer; }
 .btn + .btn { margin-top: 10px; }
