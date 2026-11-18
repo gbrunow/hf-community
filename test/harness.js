@@ -49,6 +49,7 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY, pinStyles = true
     lock: { held: false, blocked: false },
     lockWaits: [],
     triggers: [],
+    publicCalendars: new Set(),
     gemini: {
       failCode: null,
       drop: new Set(),
@@ -82,7 +83,10 @@ function createWorld({ tabs, props = {}, today = DEFAULT_TODAY, pinStyles = true
     PropertiesService: { getScriptProperties: () => scriptProperties(world) },
     SpreadsheetApp: { openById: () => spreadsheet(world) },
     CalendarApp: calendarApp(world),
-    UrlFetchApp: { fetch: (url, request) => gemini(world, url, request) },
+    UrlFetchApp: {
+      fetch: (url, request) =>
+        url.includes('/calendar/ical/') ? feed(world, url) : gemini(world, url, request),
+    },
     Utilities: {
       DigestAlgorithm: { SHA_256: 'sha256' },
       Charset: { UTF_8: 'utf8' },
@@ -365,6 +369,18 @@ function gemini(world, url, request) {
   return response(200, {
     candidates: [{ content: { parts: [{ text: JSON.stringify({ results }) }] } }],
   });
+}
+
+/**
+ * A calendar's public iCal feed, fetched signed out: the feed for a calendar named in
+ * `world.publicCalendars`, a 404 page for any other.
+ */
+function feed(world, url) {
+  const id = decodeURIComponent(url.match(/\/ical\/([^/]+)\//)[1]);
+  const calendar = Object.values(world.calendars).find((c) => c.getId() === id);
+  const open = calendar && world.publicCalendars.has(calendar.name);
+  const text = open ? 'BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n' : '<html>Not Found</html>';
+  return { getResponseCode: () => (open ? 200 : 404), getContentText: () => text };
 }
 
 function response(code, body) {

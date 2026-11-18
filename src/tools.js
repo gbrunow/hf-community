@@ -1,13 +1,17 @@
 /**
- * Logs a one-tap webcal:// subscribe link for each enabled studio's calendar. The links
- * only work once the calendar is public (Settings → the calendar → Access permissions →
- * Make available to public); scripts can't read the private secret address.
+ * Logs a one-tap webcal:// subscribe link for each calendar of each enabled studio: its
+ * main calendar and, if it has one, its classes calendar. The links only work once a
+ * calendar is public (Settings → the calendar → Access permissions → Make available to
+ * public); scripts can't read the private secret address.
  */
 function subscribeLinks() {
-  for (const studio of CONFIG.STUDIOS.filter((s) => s.enabled)) {
-    const calendar = CalendarApp.getCalendarsByName(studio.calendarName)[0];
+  const names = CONFIG.STUDIOS.filter((s) => s.enabled).flatMap((s) =>
+    [s.calendarName, s.classesCalendarName].filter((name) => name !== undefined),
+  );
+  for (const name of names) {
+    const calendar = CalendarApp.getCalendarsByName(name)[0];
     if (!calendar) {
-      console.log(`${studio.calendarName}: not created yet; run sync() first.`);
+      console.log(`${name}: not created yet; run sync() first.`);
       continue;
     }
     const link = subscribeUrl_(calendar);
@@ -19,10 +23,8 @@ function subscribeLinks() {
       feed.getResponseCode() === 200 &&
       feed.getContentText().startsWith('BEGIN:VCALENDAR');
     console.log(
-      `${studio.calendarName}: ${link}` +
-        (isPublic
-          ? ''
-          : "\n  Not public yet, so this link won't work until it is."),
+      `${name}: ${link}` +
+        (isPublic ? '' : "\n  Not public yet, so this link won't work until it is."),
     );
   }
 }
